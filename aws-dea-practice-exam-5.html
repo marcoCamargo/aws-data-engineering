@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS DEA Practice Exam 5 — Marco Antonio Camargo Funez</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --aws-orange: #FF9900;
+    --aws-dark: #0a0e1a;
+    --aws-panel: #111827;
+    --aws-card: #1a2236;
+    --aws-border: #2a3a55;
+    --aws-text: #e2e8f0;
+    --aws-muted: #7a8fa8;
+    --correct: #22c55e;
+    --incorrect: #ef4444;
+    --selected: #3b82f6;
+    --correct-bg: rgba(34,197,94,0.08);
+    --incorrect-bg: rgba(239,68,68,0.08);
+    --selected-bg: rgba(59,130,246,0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--aws-dark);
+    color: var(--aws-text);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(255,153,0,0.07) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(59,130,246,0.07) 0%, transparent 50%);
+  }
+
+  header {
+    background: linear-gradient(135deg, #0f1929 0%, #1a2236 100%);
+    border-bottom: 2px solid var(--aws-orange);
+    padding: 2rem 2rem 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+
+  .header-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .aws-badge {
+    background: var(--aws-orange);
+    color: #000;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 0.3rem 0.7rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .header-info h1 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+  }
+
+  .header-info p {
+    font-size: 0.78rem;
+    color: var(--aws-muted);
+    margin-top: 0.2rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .score-bar {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+  }
+
+  .score-display {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--aws-muted);
+  }
+
+  .score-display span {
+    color: var(--aws-orange);
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  .progress-ring {
+    width: 48px;
+    height: 48px;
+  }
+
+  .progress-ring circle {
+    fill: none;
+    stroke-width: 4;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+    transition: stroke-dashoffset 0.5s ease;
+  }
+
+  .progress-ring .bg { stroke: var(--aws-border); }
+  .progress-ring .fg { stroke: var(--aws-orange); }
+
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .stat-card {
+    flex: 1;
+    min-width: 120px;
+    background: var(--aws-card);
+    border: 1px solid var(--aws-border);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    text-align: center;
+  }
+
+  .stat-card .stat-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+    display: block;
+  }
+
+  .stat-card .stat-lbl {
+    font-size: 0.72rem;
+    color: var(--aws-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-top: 0.2rem;
+  }
+
+  .stat-card.total .stat-val { color: #fff; }
+  .stat-card.correct-s .stat-val { color: var(--correct); }
+  .stat-card.wrong-s .stat-val { color: var(--incorrect); }
+  .stat-card.pending-s .stat-val { color: var(--aws-orange); }
+
+  .question-card {
+    background: var(--aws-card);
+    border: 1px solid var(--aws-border);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+    animation: slideIn 0.4s ease both;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .question-card.answered-correct { border-color: var(--correct); }
+  .question-card.answered-wrong   { border-color: var(--incorrect); }
+
+  .q-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.4rem 1.6rem 1.2rem;
+    border-bottom: 1px solid var(--aws-border);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .q-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--aws-orange);
+    background: rgba(255,153,0,0.1);
+    border: 1px solid rgba(255,153,0,0.25);
+    border-radius: 4px;
+    padding: 0.2rem 0.55rem;
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+  }
+
+  .q-text {
+    font-size: 0.95rem;
+    font-weight: 400;
+    line-height: 1.65;
+    flex: 1;
+    color: var(--aws-text);
+  }
+
+  .q-status {
+    flex-shrink: 0;
+    font-size: 1.1rem;
+    margin-top: 0.1rem;
+  }
+
+  .q-body { padding: 1.2rem 1.6rem 1.4rem; }
+
+  .options { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border-radius: 8px;
+    border: 1.5px solid var(--aws-border);
+    background: rgba(255,255,255,0.02);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    position: relative;
+  }
+
+  .option:hover:not(.disabled) {
+    border-color: var(--selected);
+    background: var(--selected-bg);
+  }
+
+  .option.selected {
+    border-color: var(--selected);
+    background: var(--selected-bg);
+  }
+
+  .option.revealed-correct {
+    border-color: var(--correct);
+    background: var(--correct-bg);
+  }
+
+  .option.revealed-wrong {
+    border-color: var(--incorrect);
+    background: var(--incorrect-bg);
+  }
+
+  .option.disabled { cursor: default; }
+
+  .option-marker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+    color: var(--aws-muted);
+    transition: all 0.2s;
+  }
+
+  .option.selected .option-marker { color: var(--selected); border-color: var(--selected); }
+  .option.revealed-correct .option-marker { color: var(--correct); border-color: var(--correct); background: rgba(34,197,94,0.15); }
+  .option.revealed-wrong .option-marker { color: var(--incorrect); border-color: var(--incorrect); background: rgba(239,68,68,0.15); }
+
+  .option-text { flex: 1; }
+
+  .check-btn {
+    margin-top: 1rem;
+    padding: 0.65rem 1.5rem;
+    background: var(--aws-orange);
+    color: #000;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+
+  .check-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .check-btn:active { transform: translateY(0); }
+  .check-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .explanation {
+    margin-top: 1rem;
+    padding: 1rem 1.2rem;
+    background: rgba(255,153,0,0.05);
+    border-left: 3px solid var(--aws-orange);
+    border-radius: 0 6px 6px 0;
+    font-size: 0.87rem;
+    line-height: 1.65;
+    color: var(--aws-text);
+    display: none;
+  }
+
+  .explanation.visible { display: block; animation: fadeIn 0.3s ease; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+
+  .explanation strong {
+    color: var(--aws-orange);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  .multi-hint {
+    font-size: 0.75rem;
+    color: var(--aws-muted);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 0.8rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--aws-border);
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  .reset-btn {
+    display: block;
+    margin: 2.5rem auto 0;
+    padding: 0.8rem 2.5rem;
+    background: transparent;
+    color: var(--aws-orange);
+    border: 2px solid var(--aws-orange);
+    border-radius: 8px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+  }
+
+  .reset-btn:hover { background: var(--aws-orange); color: #000; }
+
+  .collapsed .q-body { display: none; }
+
+  @media (max-width: 600px) {
+    header { padding: 1.2rem 1rem 1rem; }
+    main { padding: 1.5rem 1rem 3rem; }
+    .q-header, .q-body { padding: 1rem 1rem; }
+    .score-bar { width: 100%; justify-content: flex-end; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="aws-badge">AWS DEA</div>
+    <div class="header-info">
+      <h1>Practice Exam 5</h1>
+      <p>Marco Antonio Camargo Funez &nbsp;·&nbsp; AWS Certified Data Engineer Associate</p>
+    </div>
+    <div class="score-bar">
+      <div class="score-display">Score: <span id="scoreVal">0/0</span></div>
+      <svg class="progress-ring" viewBox="0 0 48 48">
+        <circle class="bg" cx="24" cy="24" r="20"/>
+        <circle class="fg" id="progressCircle" cx="24" cy="24" r="20"
+          stroke-dasharray="125.66" stroke-dashoffset="125.66"/>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="stats-row">
+    <div class="stat-card total"><span class="stat-val" id="stTotal">20</span><span class="stat-lbl">Total</span></div>
+    <div class="stat-card correct-s"><span class="stat-val" id="stCorrect">0</span><span class="stat-lbl">Correctas</span></div>
+    <div class="stat-card wrong-s"><span class="stat-val" id="stWrong">0</span><span class="stat-lbl">Incorrectas</span></div>
+    <div class="stat-card pending-s"><span class="stat-val" id="stPending">20</span><span class="stat-lbl">Pendientes</span></div>
+  </div>
+
+  <div id="examContainer"></div>
+  <button class="reset-btn" onclick="resetExam()">↺ Reiniciar Examen</button>
+</main>
+
+<script>
+const questions = [
+  {
+    id: 1,
+    text: "A data engineer at a financial analysis firm is responsible for enriching their AWS-based data lake with external financial datasets. The firm requires regular updates of stock market data and economic indicators from various data providers, which should be integrated seamlessly into their Amazon S3-based data lake for further processing and analysis.\n\nWhich AWS service should the data engineer use to automate the ingestion of these external financial datasets into their data lake with minimal effort?",
+    options: [
+      "Set up a recurring AWS Lambda function to retrieve and upload data from third-party APIs to their S3 data lake.",
+      "Use AWS Data Exchange to subscribe to relevant financial datasets and directly import them into their S3 data lake.",
+      "Implement an AWS Glue crawler to extract data from external data sources and load it into the data lake.",
+      "Configure Amazon AppFlow to create flows between the data providers and S3, syncing the financial datasets to the data lake."
+    ],
+    correct: [1],
+    explanation: "AWS Data Exchange makes it easy to find, subscribe to, and use third-party data in the cloud. Once subscribed, the firm can set up AWS Data Exchange to automatically import these datasets into Amazon S3, ensuring the data lake is regularly updated with minimal manual intervention. Lambda requires additional development work; Glue crawlers scan existing datasets but don't retrieve new data from external providers; AppFlow is not specifically tailored for marketplace data acquisition."
+  },
+  {
+    id: 2,
+    text: "A multinational corporation has separate AWS accounts for operational workloads and compliance monitoring. The operational account generates application logs stored in Amazon CloudWatch Logs. The compliance team needs to analyze these logs using Amazon Kinesis Data Streams for real-time processing and alerting.\n\nWhich approach should the corporation take to stream application logs from the operational AWS account to the compliance team's Kinesis Data Stream in their separate AWS account?",
+    options: [
+      "Configure a Kinesis Data Stream in the operational account and grant the compliance account's IAM role cross-account access to this stream for data ingestion.",
+      "Configure a Kinesis Data Stream in the compliance account, then establish an IAM role with a trust policy in the operational account to push logs to this stream.",
+      "Configure a Kinesis Data Stream in the operational account and use AWS STS to assume a role in the compliance account for streaming logs.",
+      "Configure a Kinesis Data Stream in the compliance account, then create an IAM role in the operational account with permissions to access and write to this stream."
+    ],
+    correct: [3],
+    explanation: "The destination Kinesis Data Stream should be in the compliance account (where log analysis occurs). An IAM role in the operational account is then given permissions to write to that stream in the compliance account. This enables secure cross-account log transfer following AWS best practices. The trust relationship is established in the account owning the resource (compliance account), not the account assuming the role."
+  },
+  {
+    id: 3,
+    text: "A software company is developing a web-based application deployed on multiple Amazon EC2 instances in an Auto Scaling group. The application requires a shared file system accessible concurrently by all EC2 instances for reading and writing data, with high availability and scalability.\n\nWhich AWS storage service should the software company use?",
+    options: [
+      "Use Amazon S3 to provide a scalable object storage solution.",
+      "Implement Amazon Elastic Block Store (EBS) with shared volumes.",
+      "Use Amazon Elastic File System (EFS) for a scalable, shared file storage system.",
+      "Deploy Amazon EC2 instance store volumes for temporary, high-performance storage."
+    ],
+    correct: [2],
+    explanation: "Amazon EFS provides a fully managed elastic NFS file system that can be used with AWS Cloud services. It is highly available and scalable, and allows all Auto Scaling instances to read and write to the same file system simultaneously. S3 is object storage, not a traditional file system. EBS volumes don't natively support multiple instances simultaneously. Instance store is temporary and tied to the instance lifecycle."
+  },
+  {
+    id: 4,
+    text: "A company is deploying a stateful application on Amazon EC2 that requires temporary storage for processing large datasets with maximum I/O. The application must also maintain a smaller subset of essential state data that needs to persist beyond the life of the instance.\n\nWhich combination of storage solutions should the company choose?",
+    options: [
+      "Attach Amazon EBS volumes for essential state data and use Amazon DynamoDB for temporary data.",
+      "Attach additional Amazon EBS volumes for temporary data processing and rely on the root device volume for essential state data.",
+      "Attach Amazon EC2 instance store volumes for temporary data processing and Amazon Elastic Block Store (EBS) for essential state data.",
+      "Implement a combination of Amazon EC2 instance store volumes for rapid I/O and EBS snapshots for daily backups of essential data."
+    ],
+    correct: [2],
+    explanation: "Instance store volumes provide high I/O for temporary data processing but do not offer data persistence after an EC2 instance is stopped or terminated. For essential state data that needs to be retained long-term, EBS is appropriate because it persists independently of the EC2 instance's lifecycle. DynamoDB is not optimal for temporary high-I/O processing; EBS snapshots are for backups, not real-time persistent storage."
+  },
+  {
+    id: 5,
+    text: "A company needs to analyze high-volume streaming data for real-time insights, requiring the ability to aggregate data within a 30-minute time frame. They are looking for a highly available solution that minimizes the need for management and maintenance.\n\nWhat is the most suitable AWS service for performing these real-time analytics with the least operational effort?",
+    options: [
+      "Deploy Amazon Managed Service for Apache Flink (previously known as Amazon Kinesis Data Analytics) with SQL applications to perform windowed aggregations on the streaming data.",
+      "Deploy Amazon Kinesis Data Streams with an Amazon Kinesis Data Firehose transformation to aggregate data before storing it for analysis.",
+      "Implement an Amazon EC2 fleet with an auto-scaling policy to host a custom aggregation service that processes data from Amazon Kinesis Data Streams.",
+      "Configure an AWS Glue streaming ETL job that reads from Amazon Kinesis Data Streams and performs aggregations in real-time."
+    ],
+    correct: [0],
+    explanation: "Amazon Managed Service for Apache Flink provides managed, fault-tolerant real-time analytics with built-in time-based windowing operations. It manages underlying infrastructure and scales automatically. Kinesis Firehose doesn't natively support complex time-based aggregations. EC2 involves significant operational overhead. AWS Glue is primarily for batch ETL, not optimal for real-time windowed aggregations."
+  },
+  {
+    id: 6,
+    text: "A tech company needs to reduce costs for storing large amounts of data in Amazon S3, where access patterns are unpredictable. They require millisecond retrieval times for all data.\n\nWhich storage solution should they use?",
+    options: [
+      "Transition to S3 One Zone-Infrequent Access for all data.",
+      "Move all data to S3 Glacier for long-term storage.",
+      "Create S3 Lifecycle policies to archive data to S3 Glacier Deep Archive.",
+      "Implement S3 Intelligent-Tiering for automatic cost optimization."
+    ],
+    correct: [3],
+    explanation: "S3 Intelligent-Tiering is designed for data with unknown or unpredictable access patterns, automatically moving data to the most cost-effective tier without performance impact. It maintains millisecond-level retrieval times while optimizing costs. S3 Glacier and Glacier Deep Archive have retrieval times of minutes to hours, not milliseconds. S3 One Zone-IA stores data in a single AZ, which may not meet durability requirements."
+  },
+  {
+    id: 7,
+    text: "A financial services company wants to optimize the performance of its Amazon RDS for MySQL instances. The database administrators need to collect OS-level metrics such as CPU utilization, read IOPS, write IOPS, and memory pressure to identify bottlenecks.\n\nWhich AWS service should they use to obtain these metrics?",
+    options: [
+      "Enable Amazon RDS Performance Insights to monitor the database performance and analyze the database load.",
+      "Use AWS CloudWatch to monitor fundamental metrics and set alarms to notify when thresholds are breached.",
+      "Activate Amazon RDS Enhanced Monitoring to gain access to more than 50 new CPU, memory, file system, and disk I/O metrics.",
+      "Implement AWS X-Ray to trace and analyze user requests as they travel through the RDS databases."
+    ],
+    correct: [2],
+    explanation: "Amazon RDS Enhanced Monitoring provides real-time access to 50+ CPU, memory, file system, and disk I/O metrics collected from the operating system. These are more granular than basic CloudWatch metrics. Performance Insights focuses on database load, not OS-level metrics. CloudWatch provides fundamental metrics but not the same OS-level detail. X-Ray is for distributed application tracing, not database performance metrics."
+  },
+  {
+    id: 8,
+    text: "A company stores sensitive documents in an Amazon S3 bucket in US East (N. Virginia) and requires an automatic backup to a bucket in EU (Frankfurt) to comply with data redundancy policies.\n\nWhich Amazon S3 feature should the company use to ensure documents are automatically replicated to the second bucket?",
+    options: [
+      "S3 Transfer Acceleration",
+      "S3 Cross-Region Replication (CRR)",
+      "S3 Lifecycle Policies",
+      "S3 Versioning"
+    ],
+    correct: [1],
+    explanation: "S3 Cross-Region Replication (CRR) enables automatic replication of objects from one S3 bucket to another bucket in a different AWS region. It meets the company's redundancy requirement by creating a copy in EU (Frankfurt). Transfer Acceleration speeds up transfers but doesn't replicate. Lifecycle Policies manage object transitions/deletions but don't replicate across regions. Versioning preserves object versions but doesn't inherently replicate to another region."
+  },
+  {
+    id: 9,
+    text: "A data engineering team is optimizing their Amazon Redshift data warehouse. They have a large sales table with millions of rows and a smaller products table. Queries often join these two tables.\n\nWhich Redshift distribution style should the team use for the sales and products tables to enhance query performance?",
+    options: [
+      "Configure the sales table to EVEN distribution and the products table to KEY distribution.",
+      "Configure the sales table to ALL distribution and the products table to EVEN distribution.",
+      "Configure the sales table to AUTO distribution and the products table to ALL distribution.",
+      "Configure KEY distribution for both the sales and products tables based on the join column."
+    ],
+    correct: [2],
+    explanation: "For the large sales table, AUTO distribution lets Redshift automatically select the best distribution style. For the smaller products table, ALL distribution replicates the entire table to each node, eliminating data redistribution during join operations. ALL distribution for a large table wastes storage. KEY distribution for both requires careful key selection and works better for evenly-sized large tables."
+  },
+  {
+    id: 10,
+    text: "A financial analytics company stores large CSV files containing transaction data in Amazon S3. They need to run SQL queries directly on these CSV files without additional data transformation or loading into a database.\n\nWhich AWS service should the company use?",
+    options: [
+      "Use Amazon Redshift Spectrum to execute SQL queries on CSV files in S3.",
+      "Use AWS Data Pipeline to transfer CSV data from S3 to Amazon RDS for querying.",
+      "Use Amazon Athena to run SQL queries directly on the CSV files stored in S3.",
+      "Use Amazon EMR with a Hive metastore to query the CSV files in the S3 bucket."
+    ],
+    correct: [2],
+    explanation: "Amazon Athena is a serverless interactive query service that enables users to analyze data directly in Amazon S3 using standard SQL — including CSV format. No infrastructure to manage, no data loading required. Redshift Spectrum requires managing a Redshift cluster. Data Pipeline requires moving data to RDS, adding an unnecessary step. EMR with Hive is more complex and resource-intensive than Athena for direct S3 queries."
+  },
+  {
+    id: 11,
+    text: "A data engineer is setting up an AWS Step Functions workflow to coordinate a series of computational tasks for a large dataset. Each data element must be processed through the same sequence of tasks sequentially.\n\nWhich Step Functions state should the data engineer use for this sequential processing requirement?",
+    options: [
+      "Parallel",
+      "Choice",
+      "Wait",
+      "Map"
+    ],
+    correct: [3],
+    explanation: "The Map state in AWS Step Functions is specifically designed to iterate over a dataset and process each element through a defined sequence of steps, supporting sequential or parallel execution per item. Parallel executes multiple branches concurrently, not sequentially per item. Choice implements branching logic. Wait introduces a delay — it does not process data elements."
+  },
+  {
+    id: 12,
+    text: "A high-traffic news website is experiencing performance issues due to frequent, read-heavy queries to their main database storing user session data and website preferences. They require high throughput and low latency for data retrieval.\n\nWhich AWS service should the website implement to efficiently cache frequently accessed data?",
+    options: [
+      "Deploy Amazon Relational Database Service (RDS) with read replicas to distribute the load of read queries.",
+      "Deploy Amazon DynamoDB with DAX (DynamoDB Accelerator) for caching read-heavy query results.",
+      "Configure Amazon S3 with Amazon CloudFront for caching static user session data and website preferences.",
+      "Implement Amazon ElastiCache to cache frequent read-query results and reduce direct database queries."
+    ],
+    correct: [3],
+    explanation: "Amazon ElastiCache is a fully managed in-memory data store ideal for applications requiring fast access to data. By caching user session information and website preferences, it significantly improves read-heavy application performance. RDS read replicas help but don't match in-memory speed. DAX only works with DynamoDB. S3 + CloudFront is for static content, not dynamic session data or query results."
+  },
+  {
+    id: 13,
+    text: "A mobile gaming company experiences predictable spikes in server load every Friday evening. Their player data is stored in Amazon DynamoDB in provisioned capacity mode. The rest of the week has much lower traffic.\n\nWhich strategy should the company adopt to optimize DynamoDB performance for the expected traffic pattern while maintaining cost efficiency?",
+    options: [
+      "Manually adjust the provisioned capacity each Friday to meet the expected peak and lower it after the busy period ends.",
+      "Implement DynamoDB auto-scaling to adjust the provisioned capacity based on the usage patterns automatically.",
+      "Split the player data across multiple DynamoDB tables to distribute the load, adjusting provisioned capacity for each table accordingly.",
+      "Switch to DynamoDB on-demand capacity mode, allowing the table to automatically scale to accommodate the varying loads."
+    ],
+    correct: [1],
+    explanation: "DynamoDB auto-scaling dynamically adjusts provisioned throughput capacity in response to actual traffic patterns, ensuring peak-load handling on Fridays while reducing capacity (and costs) during off-peak times. Manual adjustment requires human intervention. Splitting across tables adds complexity without clear benefit. On-demand mode is suitable for unpredictable traffic — for predictable patterns, provisioned with auto-scaling is more cost-effective."
+  },
+  {
+    id: 14,
+    text: "An e-commerce company needs to write an SQL query to find all products that have a price greater than $50 and a quantity in stock less than 100 from a PostgreSQL 'products' table.\n\nWhich SQL query should the company use?",
+    options: [
+      "SELECT * FROM products WHERE price > $50 AND quantity_in_stock < 100;",
+      "FIND * IN products WHERE price IS GREATER THAN 50 AND quantity_in_stock IS LESS THAN 100;",
+      "GET * FROM products WHEN price > 50 & quantity_in_stock < 100;",
+      "SELECT * FROM products WHERE price > 50 AND quantity_in_stock < 100;"
+    ],
+    correct: [3],
+    explanation: "This query uses standard SQL SELECT syntax with a WHERE clause applying correct numerical comparisons without currency symbols. Numerical values in SQL should not be prefixed with '$'. 'FIND' and 'GET' are not valid SQL commands — the correct keyword is SELECT. 'IS GREATER THAN' and '&' are not valid SQL operators; the correct operators are '>' and 'AND'."
+  },
+  {
+    id: 15,
+    text: "A marketing firm needs to select all campaigns from their Redshift 'Campaigns' table where the 'CampaignName' column ends with 'Spring' or 'Summer'.\n\nWhich SQL query will accurately select these campaigns?",
+    options: [
+      "SELECT * FROM Campaigns WHERE CampaignName ENDS WITH 'Spring' OR CampaignName ENDS WITH 'Summer';",
+      "SELECT * FROM Campaigns WHERE CampaignName = '%Spring' OR CampaignName = '%Summer';",
+      "SELECT * FROM Campaigns WHERE RIGHT(CampaignName, 6) = 'Spring' OR RIGHT(CampaignName, 6) = 'Summer';",
+      "SELECT * FROM Campaigns WHERE CampaignName LIKE '%Spring' OR CampaignName LIKE '%Summer';"
+    ],
+    correct: [3],
+    explanation: "The LIKE operator with '%' wildcard before the search term matches any campaign names ending with 'Spring' or 'Summer'. 'ENDS WITH' is not a valid SQL operator. The '=' operator is for exact matches, not pattern matching with wildcards. RIGHT(CampaignName, 6) fails because 'Spring' (6 chars) and 'Summer' (6 chars) happen to be equal, but this is unnecessarily complex and brittle compared to LIKE."
+  },
+  {
+    id: 16,
+    text: "A data engineer wants to improve the execution time of Amazon Athena queries. The queries primarily filter on one column, and the data is currently stored in uncompressed .csv format.\n\nWhich action will most effectively speed up query performance?",
+    options: [
+      "Transition the data from .csv to a columnar format like Apache Parquet and employ Snappy compression to expedite column-level queries.",
+      "Convert the .csv files into XML format and utilize GZIP compression to reduce file size and improve query speed.",
+      "Partition the .csv files by the most commonly queried column to optimize data retrieval.",
+      "Enable Amazon S3 Select on the .csv files to allow Athena to retrieve only the data needed for each query."
+    ],
+    correct: [0],
+    explanation: "Apache Parquet is a columnar storage format optimized for analytic workloads — column-specific queries reduce the data scanned. Snappy compression is fast, efficient, and complements Parquet with minimal decompression overhead. XML is still row-oriented and offers no columnar performance benefit. Partitioning helps but doesn't match the impact of switching to columnar format. S3 Select reduces scanned data but less effectively than columnar format."
+  },
+  {
+    id: 17,
+    text: "A company partitions its Amazon S3 data lake using paths like s3://bucket/prefix/year=2023/month=01/day=01. A data engineer must ensure that the AWS Glue Data Catalog synchronizes with S3 when new partitions are added, with the LEAST latency.\n\nWhich solution meets these requirements?",
+    options: [
+      "Run the MSCK REPAIR TABLE command from the AWS Glue console.",
+      "Schedule an AWS Glue crawler to run every morning.",
+      "Manually run the AWS Glue CreatePartition API twice each day.",
+      "Use code that writes data to Amazon S3 to invoke the Boto3 AWS Glue create_partition API call."
+    ],
+    correct: [3],
+    explanation: "Invoking the Boto3 AWS Glue create_partition API call within the data-writing code updates the Glue Data Catalog in real-time as data is written to S3, providing the least latency. MSCK REPAIR TABLE is manual and expensive — it scans the entire bucket. A scheduled crawler introduces scheduling latency. Manually running CreatePartition twice daily introduces both latency and operational burden."
+  },
+  {
+    id: 18,
+    text: "A software development company wants to transition their Amazon EBS Provisioned IOPS SSD storage (io1) to the newer io2 volumes without disrupting running EC2 instances or risking data loss.\n\nWhat approach should a data engineer take with minimal operational effort?",
+    options: [
+      "Utilize Amazon EBS direct APIs to copy data from io1 to newly provisioned io2 volumes, then swap the volumes on the EC2 instances.",
+      "Provision new io2 volumes and incrementally copy data from io1 volumes using an EC2-based file copy tool, then detach io1 and attach io2 volumes.",
+      "Implement AWS Storage Gateway to facilitate the data transfer from io1 to io2 volumes, then update instance configurations.",
+      "Modify the volume type of the existing io1 volumes to io2 through the AWS Management Console or CLI without detaching them from the EC2 instances."
+    ],
+    correct: [3],
+    explanation: "Amazon EBS allows changing the volume type of existing volumes with no downtime using the AWS Management Console or CLI — no detachment required, no interruption. EBS direct APIs require scripting and add operational complexity. Manually copying data between volumes is time-consuming and error-prone. AWS Storage Gateway is designed for hybrid cloud scenarios, not EBS-to-EBS volume type changes."
+  },
+  {
+    id: 19,
+    text: "A data engineering team needs to analyze historical sales data in Amazon S3 (Parquet, updated monthly) alongside real-time transactional data in their Amazon Redshift cluster. They want to query both datasets simultaneously without importing the S3 data into Redshift.\n\nWhich AWS service or feature should they use?",
+    options: [
+      "Use AWS Glue Data Catalog to combine data from Amazon S3 and Redshift for querying.",
+      "Configure Amazon Athena Federated Query to access both S3 and Redshift data sources.",
+      "Set up an AWS Data Pipeline to consolidate data in S3 and Redshift for combined querying.",
+      "Implement Amazon Redshift Spectrum to query data directly in S3 from Redshift."
+    ],
+    correct: [3],
+    explanation: "Amazon Redshift Spectrum allows running SQL queries directly against data in Amazon S3 from a Redshift cluster — no loading or ETL required. This enables combined analysis of historical S3 data and real-time Redshift data in a single query. Glue Data Catalog is a metadata repository, not a query engine across both. Athena Federated Query is primarily for Athena, not seamless Redshift integration. Data Pipeline is for data movement, not direct querying."
+  },
+  {
+    id: 20,
+    text: "A company stores sensitive documents in Amazon S3 and needs to ensure that these documents can only be accessed by requests originating from a specific range of IP addresses within their corporate network, enforced at the bucket level.\n\nWhich approach should the company use?",
+    options: [
+      "Implement IAM user policies to restrict access to the S3 bucket based on the IP address.",
+      "Use a Network Access Control List (NACL) to restrict access to the S3 bucket for the specific IP range.",
+      "Set up a Security Group attached to the S3 bucket to allow traffic only from the specified IP range.",
+      "Apply an S3 bucket policy that includes a condition to allow access only from the specified IP address range."
+    ],
+    correct: [3],
+    explanation: "An S3 bucket policy with an IP condition (aws:SourceIp) is the correct way to enforce network-level access restrictions at the bucket level. IAM user policies are more suitable for user-level permissions, not broad network restrictions. NACLs operate at the subnet level within a VPC and cannot be applied directly to S3. Security Groups control traffic for EC2 instances — they cannot be attached to S3 buckets."
+  }
+];
+
+// Multi-answer questions
+const multiAnswer = [19, 21]; // using question IDs (these are handled by correct array length > 1)
+
+let userAnswers = {};
+let revealed = {};
+
+function renderExam() {
+  const container = document.getElementById('examContainer');
+  container.innerHTML = '';
+
+  questions.forEach((q, idx) => {
+    const isMulti = q.correct.length > 1;
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.id = `q${q.id}`;
+
+    const optionsHTML = q.options.map((opt, oi) => {
+      const letter = ['A','B','C','D'][oi];
+      return `
+        <li class="option" id="opt-${q.id}-${oi}" onclick="selectOption(${q.id}, ${oi}, ${isMulti})">
+          <span class="option-marker">${letter}</span>
+          <span class="option-text">${opt}</span>
+        </li>`;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="q-header" onclick="toggleCollapse(${q.id})">
+        <span class="q-num">Q${String(q.id).padStart(2,'0')}</span>
+        <span class="q-text">${q.text.replace(/\n\n/g, '<br><br>')}</span>
+        <span class="q-status" id="status-${q.id}">○</span>
+      </div>
+      <div class="q-body">
+        ${isMulti ? '<span class="multi-hint">★ Selecciona DOS respuestas</span>' : ''}
+        <ul class="options">${optionsHTML}</ul>
+        <button class="check-btn" id="btn-${q.id}" onclick="checkAnswer(${q.id})" disabled>Verificar respuesta</button>
+        <div class="explanation" id="exp-${q.id}">
+          <strong>Explicación</strong>
+          ${q.explanation}
+        </div>
+      </div>`;
+
+    container.appendChild(card);
+  });
+
+  updateStats();
+}
+
+function toggleCollapse(qid) {
+  const card = document.getElementById(`q${qid}`);
+  card.classList.toggle('collapsed');
+}
+
+function selectOption(qid, oi, isMulti) {
+  if (revealed[qid]) return;
+
+  if (!userAnswers[qid]) userAnswers[qid] = [];
+
+  if (isMulti) {
+    const idx = userAnswers[qid].indexOf(oi);
+    if (idx === -1) {
+      if (userAnswers[qid].length < 2) userAnswers[qid].push(oi);
+    } else {
+      userAnswers[qid].splice(idx, 1);
+    }
+  } else {
+    userAnswers[qid] = [oi];
+  }
+
+  // Update visual
+  const q = questions.find(q => q.id === qid);
+  q.options.forEach((_, i) => {
+    const el = document.getElementById(`opt-${qid}-${i}`);
+    el.classList.toggle('selected', userAnswers[qid].includes(i));
+  });
+
+  const btn = document.getElementById(`btn-${qid}`);
+  const needed = q.correct.length;
+  btn.disabled = userAnswers[qid].length < needed;
+}
+
+function checkAnswer(qid) {
+  if (revealed[qid]) return;
+  revealed[qid] = true;
+
+  const q = questions.find(q => q.id === qid);
+  const ua = userAnswers[qid] || [];
+  const isCorrect = JSON.stringify([...ua].sort()) === JSON.stringify([...q.correct].sort());
+
+  q.options.forEach((_, i) => {
+    const el = document.getElementById(`opt-${qid}-${i}`);
+    el.classList.remove('selected');
+    el.classList.add('disabled');
+    if (q.correct.includes(i)) el.classList.add('revealed-correct');
+    else if (ua.includes(i)) el.classList.add('revealed-wrong');
+  });
+
+  const card = document.getElementById(`q${qid}`);
+  card.classList.add(isCorrect ? 'answered-correct' : 'answered-wrong');
+
+  const status = document.getElementById(`status-${qid}`);
+  status.textContent = isCorrect ? '✓' : '✗';
+  status.style.color = isCorrect ? 'var(--correct)' : 'var(--incorrect)';
+
+  document.getElementById(`btn-${qid}`).disabled = true;
+  document.getElementById(`exp-${qid}`).classList.add('visible');
+
+  updateStats();
+}
+
+function updateStats() {
+  const total = questions.length;
+  let correct = 0, wrong = 0, pending = 0;
+
+  questions.forEach(q => {
+    if (!revealed[q.id]) { pending++; return; }
+    const ua = userAnswers[q.id] || [];
+    const isCorrect = JSON.stringify([...ua].sort()) === JSON.stringify([...q.correct].sort());
+    if (isCorrect) correct++; else wrong++;
+  });
+
+  const answered = correct + wrong;
+  document.getElementById('stCorrect').textContent = correct;
+  document.getElementById('stWrong').textContent = wrong;
+  document.getElementById('stPending').textContent = pending;
+  document.getElementById('scoreVal').textContent = `${correct}/${answered}`;
+
+  const pct = answered > 0 ? correct / total : 0;
+  const circumference = 125.66;
+  const offset = circumference - (pct * circumference);
+  document.getElementById('progressCircle').style.strokeDashoffset = offset;
+}
+
+function resetExam() {
+  if (!confirm('¿Reiniciar el examen? Se perderá todo el progreso.')) return;
+  userAnswers = {};
+  revealed = {};
+  renderExam();
+}
+
+renderExam();
+</script>
+</body>
+</html>

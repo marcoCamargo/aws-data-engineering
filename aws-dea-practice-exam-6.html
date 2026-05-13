@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS DEA Practice Exam 6 — Marco Antonio Camargo Funez</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --aws-orange: #FF9900;
+    --aws-dark: #0a0e1a;
+    --aws-panel: #111827;
+    --aws-card: #1a2236;
+    --aws-border: #2a3a55;
+    --aws-text: #e2e8f0;
+    --aws-muted: #7a8fa8;
+    --correct: #22c55e;
+    --incorrect: #ef4444;
+    --selected: #3b82f6;
+    --correct-bg: rgba(34,197,94,0.08);
+    --incorrect-bg: rgba(239,68,68,0.08);
+    --selected-bg: rgba(59,130,246,0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--aws-dark);
+    color: var(--aws-text);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(255,153,0,0.07) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(59,130,246,0.07) 0%, transparent 50%);
+  }
+
+  header {
+    background: linear-gradient(135deg, #0f1929 0%, #1a2236 100%);
+    border-bottom: 2px solid var(--aws-orange);
+    padding: 2rem 2rem 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+
+  .header-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .aws-badge {
+    background: var(--aws-orange);
+    color: #000;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 0.3rem 0.7rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .header-info h1 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+  }
+
+  .header-info p {
+    font-size: 0.78rem;
+    color: var(--aws-muted);
+    margin-top: 0.2rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .score-bar {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+  }
+
+  .score-display {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--aws-muted);
+  }
+
+  .score-display span {
+    color: var(--aws-orange);
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  .progress-ring { width: 48px; height: 48px; }
+  .progress-ring circle { fill: none; stroke-width: 4; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 0.5s ease; }
+  .progress-ring .bg { stroke: var(--aws-border); }
+  .progress-ring .fg { stroke: var(--aws-orange); }
+
+  main { max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+  .stats-row { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+
+  .stat-card {
+    flex: 1; min-width: 120px;
+    background: var(--aws-card);
+    border: 1px solid var(--aws-border);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    text-align: center;
+  }
+
+  .stat-card .stat-val { font-family: 'IBM Plex Mono', monospace; font-size: 1.6rem; font-weight: 700; display: block; }
+  .stat-card .stat-lbl { font-size: 0.72rem; color: var(--aws-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 0.2rem; }
+  .stat-card.total .stat-val { color: #fff; }
+  .stat-card.correct-s .stat-val { color: var(--correct); }
+  .stat-card.wrong-s .stat-val { color: var(--incorrect); }
+  .stat-card.pending-s .stat-val { color: var(--aws-orange); }
+
+  .question-card {
+    background: var(--aws-card);
+    border: 1px solid var(--aws-border);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+    animation: slideIn 0.4s ease both;
+  }
+
+  @keyframes slideIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+  .question-card.answered-correct { border-color: var(--correct); }
+  .question-card.answered-wrong   { border-color: var(--incorrect); }
+
+  .q-header {
+    display: flex; align-items: flex-start; gap: 1rem;
+    padding: 1.4rem 1.6rem 1.2rem;
+    border-bottom: 1px solid var(--aws-border);
+    cursor: pointer; user-select: none;
+  }
+
+  .q-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem; font-weight: 600;
+    color: var(--aws-orange);
+    background: rgba(255,153,0,0.1);
+    border: 1px solid rgba(255,153,0,0.25);
+    border-radius: 4px;
+    padding: 0.2rem 0.55rem;
+    flex-shrink: 0; margin-top: 0.15rem;
+  }
+
+  .q-text { font-size: 0.95rem; font-weight: 400; line-height: 1.65; flex: 1; color: var(--aws-text); }
+  .q-status { flex-shrink: 0; font-size: 1.1rem; margin-top: 0.1rem; }
+  .q-body { padding: 1.2rem 1.6rem 1.4rem; }
+
+  .options { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .option {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border-radius: 8px;
+    border: 1.5px solid var(--aws-border);
+    background: rgba(255,255,255,0.02);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem; line-height: 1.55;
+  }
+
+  .option:hover:not(.disabled) { border-color: var(--selected); background: var(--selected-bg); }
+  .option.selected { border-color: var(--selected); background: var(--selected-bg); }
+  .option.revealed-correct { border-color: var(--correct); background: var(--correct-bg); }
+  .option.revealed-wrong { border-color: var(--incorrect); background: var(--incorrect-bg); }
+  .option.disabled { cursor: default; }
+
+  .option-marker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem; font-weight: 600;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 0.1rem;
+    color: var(--aws-muted);
+    transition: all 0.2s;
+  }
+
+  .option.selected .option-marker { color: var(--selected); border-color: var(--selected); }
+  .option.revealed-correct .option-marker { color: var(--correct); border-color: var(--correct); background: rgba(34,197,94,0.15); }
+  .option.revealed-wrong .option-marker { color: var(--incorrect); border-color: var(--incorrect); background: rgba(239,68,68,0.15); }
+  .option-text { flex: 1; }
+
+  .check-btn {
+    margin-top: 1rem;
+    padding: 0.65rem 1.5rem;
+    background: var(--aws-orange); color: #000;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 700; font-size: 0.85rem;
+    border: none; border-radius: 6px;
+    cursor: pointer; letter-spacing: 0.03em;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+
+  .check-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .check-btn:active { transform: translateY(0); }
+  .check-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .explanation {
+    margin-top: 1rem;
+    padding: 1rem 1.2rem;
+    background: rgba(255,153,0,0.05);
+    border-left: 3px solid var(--aws-orange);
+    border-radius: 0 6px 6px 0;
+    font-size: 0.87rem; line-height: 1.65;
+    color: var(--aws-text);
+    display: none;
+  }
+
+  .explanation.visible { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .explanation strong {
+    color: var(--aws-orange);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  .multi-hint {
+    font-size: 0.75rem; color: var(--aws-muted);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 0.8rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--aws-border);
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  .reset-btn {
+    display: block; margin: 2.5rem auto 0;
+    padding: 0.8rem 2.5rem;
+    background: transparent; color: var(--aws-orange);
+    border: 2px solid var(--aws-orange);
+    border-radius: 8px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 700; font-size: 0.9rem;
+    cursor: pointer; letter-spacing: 0.05em;
+    transition: all 0.2s;
+  }
+
+  .reset-btn:hover { background: var(--aws-orange); color: #000; }
+  .collapsed .q-body { display: none; }
+
+  @media (max-width: 600px) {
+    header { padding: 1.2rem 1rem 1rem; }
+    main { padding: 1.5rem 1rem 3rem; }
+    .q-header, .q-body { padding: 1rem 1rem; }
+    .score-bar { width: 100%; justify-content: flex-end; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="aws-badge">AWS DEA</div>
+    <div class="header-info">
+      <h1>Practice Exam 6</h1>
+      <p>Marco Antonio Camargo Funez &nbsp;·&nbsp; AWS Certified Data Engineer Associate</p>
+    </div>
+    <div class="score-bar">
+      <div class="score-display">Score: <span id="scoreVal">0/0</span></div>
+      <svg class="progress-ring" viewBox="0 0 48 48">
+        <circle class="bg" cx="24" cy="24" r="20"/>
+        <circle class="fg" id="progressCircle" cx="24" cy="24" r="20"
+          stroke-dasharray="125.66" stroke-dashoffset="125.66"/>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="stats-row">
+    <div class="stat-card total"><span class="stat-val" id="stTotal">20</span><span class="stat-lbl">Total</span></div>
+    <div class="stat-card correct-s"><span class="stat-val" id="stCorrect">0</span><span class="stat-lbl">Correctas</span></div>
+    <div class="stat-card wrong-s"><span class="stat-val" id="stWrong">0</span><span class="stat-lbl">Incorrectas</span></div>
+    <div class="stat-card pending-s"><span class="stat-val" id="stPending">20</span><span class="stat-lbl">Pendientes</span></div>
+  </div>
+
+  <div id="examContainer"></div>
+  <button class="reset-btn" onclick="resetExam()">↺ Reiniciar Examen</button>
+</main>
+
+<script>
+const questions = [
+  {
+    id: 1,
+    text: "A digital marketing agency collects customer interaction data through various cloud-based platforms and wants to analyze this data using Amazon Redshift. The data, sourced from multiple SaaS platforms, must be consolidated into an Amazon S3 bucket before analysis. The agency seeks the most straightforward and maintenance-light method to import this data into S3.\n\nWhich AWS service or feature should the agency use to streamline the transfer of data from the SaaS platforms to Amazon S3 with minimal operational effort?",
+    options: [
+      "Use Amazon EventBridge to route data from SaaS platforms to the S3 bucket.",
+      "Use AWS Data Exchange to import third-party data directly into S3.",
+      "Use Amazon AppFlow for no-code data transfer between SaaS applications and S3.",
+      "Use the AWS Transfer Family to handle SaaS data ingestion into the S3 bucket."
+    ],
+    correct: [2],
+    explanation: "Amazon AppFlow is a fully managed integration service that enables secure, no-code data transfer between AWS services and SaaS applications. It allows the agency to connect their SaaS platforms to Amazon S3, set up data transfer flows, and schedule them at desired intervals without writing any custom integration code or managing infrastructure. EventBridge is an event bus, not a data transfer service. AWS Data Exchange is for third-party marketplace data, not custom SaaS tools. AWS Transfer Family uses SFTP/FTPS/FTP, which SaaS platforms may not natively support."
+  },
+  {
+    id: 2,
+    text: "A digital media company has a vast collection of images stored in an Amazon S3 bucket. They require a dynamic solution that allows them to deliver resized images to their users on-the-fly, based on the specific size requested in the user's application. The solution must transform the images without storing multiple variants and should be integrated directly within the S3 object retrieval flow.\n\nWhich AWS service or feature should the company use to resize images dynamically when they are requested from the S3 bucket?",
+    options: [
+      "Implement AWS Lambda@Edge with Amazon CloudFront to resize images upon retrieval at the edge locations.",
+      "Use Amazon S3 Object Lambda to apply image resizing operations during the data retrieval from S3.",
+      "Set up an Amazon API Gateway with AWS Lambda to handle image resizing and serve the resized images from S3.",
+      "Configure Amazon S3 Event Notifications to trigger an AWS Lambda function for resizing upon each image retrieval request."
+    ],
+    correct: [1],
+    explanation: "Amazon S3 Object Lambda allows you to add custom code to S3 GET requests to modify and process data as it is returned to an application. Image resizing logic is applied on-the-fly based on the dimensions specified in the user's request, eliminating the need to store multiple variants. Lambda@Edge caches resized images at the edge, which doesn't align with the S3 retrieval flow requirement. API Gateway adds unnecessary complexity. S3 Event Notifications respond to object changes (creation, deletion), not retrieval requests."
+  },
+  {
+    id: 3,
+    text: "A logistics company stores large datasets of shipping records in various formats in Amazon S3. They need to clean, transform, and consolidate this data into a structured format for analysis and reporting purposes. The process should be automated and scalable to handle increasing data volumes.\n\nWhat AWS service should the data engineering team use to efficiently perform ETL (Extract, Transform, Load) operations on these datasets?",
+    options: [
+      "Deploy Amazon Redshift Spectrum to perform ETL operations directly on the data stored in S3.",
+      "Use AWS Glue, a serverless data integration service, to perform ETL operations on the S3 datasets.",
+      "Configure Amazon EMR to run custom ETL scripts on the data stored in S3.",
+      "Set up an AWS Lambda function to trigger ETL processes on the data in S3 upon file upload."
+    ],
+    correct: [1],
+    explanation: "AWS Glue is a fully managed, serverless ETL service ideal for transforming and preparing large datasets. It automates cataloging, cleaning, enriching, and moving data between stores. Its serverless nature scales ETL operations without managing infrastructure. Redshift Spectrum is for querying data in S3, not for ETL transformation. EMR can run ETL but requires cluster management, adding operational overhead. Lambda is suitable for smaller event-driven tasks, not large-scale complex ETL operations."
+  },
+  {
+    id: 4,
+    text: "A digital media company processes large volumes of image and video files daily stored in Amazon S3. They need to analyze metadata extracted from these files (file size, type, creation date) and store this information for quick retrieval and analysis. The solution should automatically handle new files as they are uploaded and be scalable.\n\nWhich AWS service should the company implement to extract, store, and manage the metadata efficiently?",
+    options: [
+      "Use AWS Glue to run ETL jobs on new files in S3, extract metadata, and store it in Amazon RDS for querying.",
+      "Configure Amazon S3 Event Notifications to trigger AWS Lambda functions for metadata extraction and storage in Amazon DynamoDB.",
+      "Implement Amazon Kinesis Data Firehose to capture file metadata and load it into Amazon Redshift for analysis.",
+      "Utilize Amazon Athena to query S3 metadata directly and store the query results in Amazon ElastiCache for quick access."
+    ],
+    correct: [1],
+    explanation: "S3 Event Notifications trigger Lambda functions when new files arrive, allowing serverless metadata extraction that scales automatically. Storing extracted metadata in DynamoDB provides fast, low-latency access for quick retrieval and analysis. AWS Glue with RDS is not optimal for high-velocity media file metadata. Kinesis Firehose is for streaming data, not file-based metadata extraction; Redshift is more complex for simple metadata. Athena is a query service, not suited for extraction and management of file metadata."
+  },
+  {
+    id: 5,
+    text: "An e-commerce company is enhancing its product recommendation engine by integrating external market research data. To refine their recommendations, the company needs to efficiently incorporate this third-party data into their existing data analysis infrastructure.\n\nWhich AWS service should the e-commerce company use to seamlessly incorporate third-party market research datasets with minimal operational effort?",
+    options: [
+      "Use AWS DataSync to transfer third-party datasets into the company's AWS environment for integration.",
+      "Import third-party datasets directly from AWS Data Exchange into the company's data analytics platform.",
+      "Stream third-party data into the company's system using Amazon Kinesis Data Streams from AWS CodeCommit.",
+      "Access and integrate third-party datasets from Amazon S3 using Amazon Kinesis Data Streams."
+    ],
+    correct: [1],
+    explanation: "AWS Data Exchange provides a marketplace to find, subscribe to, and use third-party data with minimal operational overhead. It handles the complexities of data access and integration, letting the company focus on their recommendation engine. AWS DataSync is for moving data between on-premises storage and AWS, not for accessing third-party datasets. Kinesis from CodeCommit makes no sense — CodeCommit is a source control service. S3 + Kinesis doesn't address how to acquire third-party market research data."
+  },
+  {
+    id: 6,
+    text: "A company plans to move 10 TB of multimedia content from their local servers to AWS, with a portion of the data being updated weekly. These updates must be reflected in the Amazon S3 bucket where the data will be stored.\n\nTo automate and schedule these data transfers effectively, which AWS service should the company employ?",
+    options: [
+      "Deploy an AWS Storage Gateway to synchronize and manage data transfers to S3.",
+      "Use AWS Transfer for SFTP to secure and automate data transfer to S3.",
+      "Use AWS DataSync to automate and schedule the ongoing transfer of files to Amazon S3.",
+      "Set up an AWS Snowball job for periodic data transfer to Amazon S3."
+    ],
+    correct: [2],
+    explanation: "AWS DataSync is designed to move large amounts of data online between on-premises storage and AWS services like Amazon S3. It supports scheduling recurring transfer tasks and only transfers modified content (the weekly updates), saving bandwidth and time. Storage Gateway is typically for backup and archival, not frequent large-dataset transfers. AWS Transfer for SFTP lacks native scheduling and automation features for large-scale migrations. Snowball requires physical device shipping per transfer — impractical for regular weekly updates."
+  },
+  {
+    id: 7,
+    text: "A business is restructuring their data storage strategy, centralizing diverse datasets into an Amazon S3-based data lake. During the initial data assessment, the team discovered redundant entries within their existing datasets.\n\nWhat is the most efficient method for the data team to remove dataset redundancies?",
+    options: [
+      "Use AWS Glue with built-in deduplication transformations to clean the data.",
+      "Create an AWS Lambda function with custom Python code to remove duplicates before moving data to the data lake.",
+      "Create an Amazon S3 Lifecycle policy to automatically handle data deduplication.",
+      "Use Amazon Athena to run SQL queries that identify and delete duplicate records."
+    ],
+    correct: [0],
+    explanation: "AWS Glue is a managed ETL service that provides built-in transforms such as DropDuplicates, which removes duplicate data without writing custom code. This offers the least operational overhead. Lambda with custom deduplication code increases development and maintenance burden. S3 Lifecycle policies manage object transitions and deletions based on age, not deduplication. Athena can identify duplicates via SQL but doesn't modify or remove data in S3 natively — additional steps would be needed, adding complexity."
+  },
+  {
+    id: 8,
+    text: "A fintech company is developing a real-time fraud detection system that needs to process and analyze large streams of transaction data as they occur. The system must capture, process, and analyze data in real-time to detect and alert on potentially fraudulent activities instantly.\n\nWhich AWS service is most suitable for capturing and processing this high-volume, real-time transaction data?",
+    options: [
+      "Implement Amazon Simple Queue Service (SQS) to manage the stream of transaction data.",
+      "Store transaction data in Amazon DynamoDB and use DynamoDB Streams for real-time processing.",
+      "Use Amazon Kinesis Data Streams to capture and process the high-volume transaction data in real-time.",
+      "Configure Amazon S3 event notifications to trigger processing of transaction data."
+    ],
+    correct: [2],
+    explanation: "Amazon Kinesis Data Streams is designed for real-time data streaming and processing, capable of continuously capturing terabytes of data per hour from hundreds of thousands of sources. It enables immediate analysis essential for real-time fraud detection. SQS is a message queuing service suited for decoupling, not real-time analytics. DynamoDB Streams captures table item changes, not high-volume streaming transaction data. S3 event notifications respond to object changes and provide low-latency processing unsuitable for fraud detection."
+  },
+  {
+    id: 9,
+    text: "A data engineering team is building a system that processes various types of events generated by different applications within their organization. The system needs to route these events to specific AWS services for processing and analysis based on the event type. The solution must be scalable and able to handle many events efficiently.\n\nWhich AWS service should the data engineering team use to route these events to the appropriate AWS services based on the type of event?",
+    options: [
+      "Use Amazon Kinesis Data Streams to filter and route the events to different AWS services.",
+      "Use Amazon EventBridge to route events to target AWS services based on rules.",
+      "Use AWS Lambda to manually parse and dispatch events to other AWS services.",
+      "Use AWS Step Functions to orchestrate the event routing process to various AWS services."
+    ],
+    correct: [1],
+    explanation: "Amazon EventBridge is a serverless event bus that captures events from various sources (applications, AWS services, external services) and routes them to appropriate targets based on content-based rules. It is scalable and designed for event-driven architectures. Kinesis is for real-time data streaming, not event routing based on type or content. Lambda for manual dispatch requires more development effort and won't scale as efficiently. Step Functions orchestrates workflows but is not an event router."
+  },
+  {
+    id: 10,
+    text: "A photography studio stores its high-resolution image files in an Amazon S3 bucket. Recently, they encountered issues with accidental overwrites of important files. The studio requires a solution to prevent the overwriting and accidental deletion of their images while ensuring that the latest version of a file is readily accessible.\n\nWhich single feature should the photography studio enable on their S3 bucket to address this issue effectively?",
+    options: [
+      "Implement S3 Lifecycle policies to archive older versions of files to S3 Glacier.",
+      "Activate S3 Versioning to maintain multiple versions of each file.",
+      "Enable S3 Object Lock in compliance mode for strict WORM (Write Once, Read Many) protection.",
+      "Configure S3 Intelligent-Tiering to manage the storage of the files efficiently."
+    ],
+    correct: [1],
+    explanation: "S3 Versioning prevents data loss due to overwrites and deletions by keeping multiple versions of each object. When a file is overwritten or deleted, the older version is preserved, allowing easy recovery — and the latest version remains readily accessible. S3 Lifecycle policies manage storage transitions/deletions but don't prevent overwriting current versions. S3 Object Lock in compliance mode is more stringent than needed — typically used for regulatory immutability requirements. S3 Intelligent-Tiering is for cost optimization, not overwrite protection."
+  },
+  {
+    id: 11,
+    text: "A data analytics team is leveraging Amazon Redshift for their complex querying and reporting needs. To ensure optimal performance, they want to track when the query optimizer flags potential inefficiencies.\n\nWhich Amazon Redshift system view can the data engineer consult to find optimizer-generated performance alerts?",
+    options: [
+      "Examine the STL_WLM_QUERY system view to observe query execution and queueing durations.",
+      "Observe the STL_QUERYTEXT system view for the text of the SQL statements executed.",
+      "Refer to the STL_ALERT_EVENT_LOG system view to find warnings and alerts related to query optimization.",
+      "Inspect the SVL_QUERY_SUMMARY system view for summary data about query execution."
+    ],
+    correct: [2],
+    explanation: "STL_ALERT_EVENT_LOG is specifically designed to record alerts generated by the Amazon Redshift query optimizer, logging alert events that indicate performance issues (e.g., excessive memory consumption, inefficient nested loop joins). STL_WLM_QUERY provides query execution and queueing durations but not optimizer alerts. STL_QUERYTEXT contains the text of each SQL command — useful for review, but not for optimizer diagnostics. SVL_QUERY_SUMMARY gives execution summaries but lacks specific optimizer warnings."
+  },
+  {
+    id: 12,
+    text: "A company uses an Amazon S3 bucket to store data in both JSON and .csv formats. They also operate databases on Amazon RDS for Microsoft SQL Server, have Amazon DynamoDB tables, and run queries on an Amazon Redshift cluster. They need a straightforward solution that allows their data scientists to perform SQL-like queries across all these data sources.\n\nWhat is the simplest solution for enabling these queries with the least operational overhead?",
+    options: [
+      "Catalog the data with AWS Glue, and query using Redshift Spectrum, applying standard SQL to structured data and PartiQL to JSON.",
+      "Enable AWS Glue to catalog the data sources and use Amazon Athena with standard SQL for structured data and PartiQL for the JSON data.",
+      "Use AWS Glue to catalog and transform JSON data into .csv format using Glue jobs, then query all data using Amazon Athena.",
+      "Set up a data lake with AWS Lake Formation, convert all data to Apache Parquet using Lake Formation jobs, and query using Athena or Redshift Spectrum."
+    ],
+    correct: [1],
+    explanation: "AWS Glue catalogs data across S3, RDS, DynamoDB, and Redshift. Amazon Athena then queries structured data (CSV) with standard SQL and JSON data with PartiQL — no data transformation required, minimizing overhead. Redshift Spectrum adds unnecessary complexity requiring an existing Redshift cluster. Transforming JSON to CSV adds extra steps and operational overhead. Converting all data to Parquet via Lake Formation is also an unnecessary extra step when Athena handles the existing formats natively."
+  },
+  {
+    id: 13,
+    text: "A mobile gaming company uses Amazon DynamoDB to store player session data. The data becomes irrelevant after 24 hours and should be automatically deleted to save storage space and reduce costs.\n\nWhich DynamoDB feature should the company use to automatically remove outdated player session data after 24 hours?",
+    options: [
+      "DynamoDB TTL (Time To Live)",
+      "DynamoDB Streams",
+      "DynamoDB Conditional Writes",
+      "DynamoDB Auto Scaling"
+    ],
+    correct: [0],
+    explanation: "DynamoDB TTL automatically deletes items from a table after a defined time period. By enabling TTL set to 24 hours, DynamoDB removes expired session items in the background without consuming any write throughput — a cost-effective, zero-intervention solution. DynamoDB Streams capture item changes in near real-time but don't automatically delete items. Conditional Writes require conditions to be met for write operations but don't auto-delete by time. Auto Scaling adjusts read/write capacity but has nothing to do with item deletion."
+  },
+  {
+    id: 14,
+    text: "A startup company needs a user-friendly tool to visualize and analyze its sales data stored in Amazon S3. The solution should be easy to use, require minimal setup, and provide interactive dashboards and insights.\n\nWhich AWS service should the company use for visualizing and analyzing their sales data?",
+    options: [
+      "Amazon QuickSight",
+      "Amazon Athena",
+      "AWS Glue",
+      "Amazon Redshift"
+    ],
+    correct: [0],
+    explanation: "Amazon QuickSight is a cloud-powered business intelligence service that makes it easy to build visualizations, perform ad-hoc analysis, and get business insights. It connects directly to Amazon S3 and provides user-friendly interactive dashboards with no servers to manage. Athena is an interactive query service for SQL analysis — not a visualization tool. AWS Glue is primarily for ETL operations and data cataloging. Redshift is a data warehouse for storing and analyzing large datasets — also not a visualization tool on its own."
+  },
+  {
+    id: 15,
+    text: "A cloud architect is developing an AWS Step Functions workflow to orchestrate a data migration process involving data extraction, transformation, and loading into a new system. Each task must be completed before the next one begins.\n\nWhich Step Functions state should the architect use to ensure that these tasks are executed in the required sequence?",
+    options: [
+      "Parallel",
+      "Choice",
+      "Wait",
+      "Succeed"
+    ],
+    correct: [3],
+    explanation: "The 'Succeed' state marks the workflow as successfully completed. Sequential execution is managed by the state machine structure itself — each task transitions to the next upon successful completion, ultimately leading to the 'Succeed' state. 'Parallel' executes multiple branches concurrently, not sequentially. 'Choice' implements branching logic based on input data. 'Wait' introduces a time delay but does not control the sequence of task execution."
+  },
+  {
+    id: 16,
+    text: "A marketing firm analyzes social media engagement data collected daily and saved as .csv files in an Amazon S3 bucket. The firm's data engineer needs to ensure that the S3 data is cataloged daily for use with AWS analytics services.\n\nWhat steps should the data engineer take to catalog the social media data files in the AWS Glue Data Catalog each day with the least manual effort?",
+    options: [
+      "Assign an IAM role with the necessary Glue permissions to the AWS Glue crawler, point it to the S3 bucket's social media data, and set a daily schedule for the crawler.",
+      "Use AWS Lambda to invoke an AWS Glue crawler for the social media data in S3, running the function with a CloudWatch Events rule on a daily schedule.",
+      "Configure an AWS Batch job to execute the AWS Glue crawler for the S3 data, with a scheduled CloudWatch Events rule to trigger the job each day.",
+      "Implement an Amazon EventBridge rule to trigger an AWS Step Functions workflow that runs the Glue crawler daily."
+    ],
+    correct: [0],
+    explanation: "Configuring an AWS Glue crawler with the correct IAM role and setting a built-in daily schedule is the most direct approach — no additional services needed. The crawler automatically discovers and catalogs new and modified files. Using Lambda to invoke the crawler adds an unnecessary extra service. AWS Batch is for batch computing workloads, not for running Glue crawlers. EventBridge + Step Functions adds orchestration layers that are completely unnecessary for a simple daily crawler schedule."
+  },
+  {
+    id: 17,
+    text: "A data engineering team at an e-commerce company is optimizing their query performance on Amazon Redshift. They have numerous complex queries running against large, joined datasets. The team is considering materialized views to speed up frequently executed queries that join multiple tables.\n\nWhich feature should the team implement to enhance their query performance in Redshift?",
+    options: [
+      "Activate Redshift's automatic workload management (WLM) to dynamically manage memory and prioritize queries.",
+      "Enable short query acceleration in Redshift to prioritize execution of the complex join queries.",
+      "Configure Redshift Spectrum to offload the complex join queries and utilize external tables for better performance.",
+      "Use Redshift's Query Optimizer with materialized views to precompute and store the results of complex joins."
+    ],
+    correct: [3],
+    explanation: "Redshift materialized views store precomputed results of expensive join operations. When queries are executed, the Query Optimizer uses materialized views to deliver faster results — especially effective for repetitive and predictable query patterns. WLM manages memory allocation and query priority but doesn't optimize join execution plans. Short query acceleration prioritizes shorter queries over longer ones — it doesn't optimize complex joins themselves. Redshift Spectrum is for querying S3 data, not for optimizing joins within Redshift."
+  },
+  {
+    id: 18,
+    text: "A media company with a large library of digital assets uses Amazon S3 to store high-resolution images. The images are frequently accessed in the first month after upload but are rarely accessed thereafter. Immediate access is required on demand, even after the initial month. The company seeks to lower their S3 storage costs while maintaining quick access.\n\nWhich S3 storage class is the most cost effective and meets the requirements?",
+    options: [
+      "Store the images in S3 Standard-IA after the first month.",
+      "Move the images to S3 Glacier immediately after the first month.",
+      "Keep the images in S3 Standard for high availability access.",
+      "Use S3 Outposts for on-premises access to the images."
+    ],
+    correct: [0],
+    explanation: "S3 Standard-IA is designed for data that is accessed less frequently but requires rapid access when needed. It offers a lower storage price than S3 Standard while maintaining the same low-latency and high-throughput performance — ideal for images that are rarely accessed after the first month but still need to be retrieved quickly. S3 Glacier has retrieval times of minutes to hours, not immediate. S3 Standard is not cost-efficient for rarely accessed data. S3 Outposts is for on-premises AWS infrastructure, not a cost optimization strategy."
+  },
+  {
+    id: 19,
+    text: "A healthcare company stores sensitive patient records as JSON files in an Amazon S3 bucket in the US East (N. Virginia) region. Due to regulatory requirements, they need to ensure that this data is automatically backed up to another AWS region for disaster recovery purposes.\n\nWhich AWS solution should the company implement to automatically back up their S3 bucket data to a different region?",
+    options: [
+      "Enable cross-region replication on the S3 bucket to automatically replicate data to another S3 bucket in a different AWS region.",
+      "Use AWS Data Pipeline to create a daily job that copies data from the original S3 bucket to another bucket in a different region.",
+      "Implement an AWS Lambda function triggered by S3 events to copy new files to a backup bucket in another AWS region.",
+      "Configure Amazon S3 Lifecycle policies to transfer data to an S3 bucket in another region after a specific period."
+    ],
+    correct: [0],
+    explanation: "Amazon S3 Cross-Region Replication (CRR) automatically replicates data from one S3 bucket to another bucket in a different AWS region — a simple, reliable, and seamless solution for backup and disaster recovery. Data Pipeline requires setting up and scheduling jobs, adding complexity and lacking real-time replication. Lambda for cross-region copy introduces unnecessary complexity and is more error-prone than native CRR. S3 Lifecycle policies manage storage class transitions and deletions but do not support cross-region replication."
+  },
+  {
+    id: 20,
+    text: "A data engineer is experiencing permission-related errors when trying to access data through an Amazon QuickSight dashboard, which relies on Amazon Athena queries running on data in an S3 bucket.\n\nWhat could be the possible reasons for these errors? (Select TWO.)",
+    options: [
+      "The S3 bucket where the data is stored has block public access settings enabled, preventing QuickSight from accessing the data.",
+      "QuickSight's SPICE capacity has been reached, and it is unable to import more data from Athena.",
+      "QuickSight is not granted the necessary permissions within the AWS Identity and Access Management (IAM) policy to access the Athena tables.",
+      "The KMS key policies do not include QuickSight as a principal, hindering decryption of the data queried by Athena."
+    ],
+    correct: [2, 3],
+    explanation: "Two valid reasons: (1) If QuickSight lacks the appropriate IAM permissions, it cannot execute Athena queries, causing permission errors. (2) When data in S3 is encrypted with a KMS key, QuickSight must be listed as a principal in the KMS key policy to decrypt the data — otherwise access fails. Block public access settings don't affect services using authenticated IAM permissions. Reaching SPICE capacity limits performance/import but does not cause permission errors. VPC settings typically don't cause permission-type errors for S3 access through QuickSight."
+  }
+];
+
+let userAnswers = {};
+let revealed = {};
+
+function renderExam() {
+  const container = document.getElementById('examContainer');
+  container.innerHTML = '';
+
+  questions.forEach((q) => {
+    const isMulti = q.correct.length > 1;
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.id = `q${q.id}`;
+
+    const optionsHTML = q.options.map((opt, oi) => {
+      const letter = ['A','B','C','D'][oi];
+      return `
+        <li class="option" id="opt-${q.id}-${oi}" onclick="selectOption(${q.id}, ${oi}, ${isMulti})">
+          <span class="option-marker">${letter}</span>
+          <span class="option-text">${opt}</span>
+        </li>`;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="q-header" onclick="toggleCollapse(${q.id})">
+        <span class="q-num">Q${String(q.id).padStart(2,'0')}</span>
+        <span class="q-text">${q.text.replace(/\n\n/g, '<br><br>')}</span>
+        <span class="q-status" id="status-${q.id}">○</span>
+      </div>
+      <div class="q-body">
+        ${isMulti ? '<span class="multi-hint">★ Selecciona DOS respuestas</span>' : ''}
+        <ul class="options">${optionsHTML}</ul>
+        <button class="check-btn" id="btn-${q.id}" onclick="checkAnswer(${q.id})" disabled>Verificar respuesta</button>
+        <div class="explanation" id="exp-${q.id}">
+          <strong>Explicación</strong>
+          ${q.explanation}
+        </div>
+      </div>`;
+
+    container.appendChild(card);
+  });
+
+  updateStats();
+}
+
+function toggleCollapse(qid) {
+  document.getElementById(`q${qid}`).classList.toggle('collapsed');
+}
+
+function selectOption(qid, oi, isMulti) {
+  if (revealed[qid]) return;
+  if (!userAnswers[qid]) userAnswers[qid] = [];
+
+  if (isMulti) {
+    const idx = userAnswers[qid].indexOf(oi);
+    if (idx === -1) { if (userAnswers[qid].length < 2) userAnswers[qid].push(oi); }
+    else { userAnswers[qid].splice(idx, 1); }
+  } else {
+    userAnswers[qid] = [oi];
+  }
+
+  const q = questions.find(q => q.id === qid);
+  q.options.forEach((_, i) => {
+    document.getElementById(`opt-${qid}-${i}`).classList.toggle('selected', userAnswers[qid].includes(i));
+  });
+
+  const btn = document.getElementById(`btn-${qid}`);
+  btn.disabled = userAnswers[qid].length < q.correct.length;
+}
+
+function checkAnswer(qid) {
+  if (revealed[qid]) return;
+  revealed[qid] = true;
+
+  const q = questions.find(q => q.id === qid);
+  const ua = userAnswers[qid] || [];
+  const isCorrect = JSON.stringify([...ua].sort()) === JSON.stringify([...q.correct].sort());
+
+  q.options.forEach((_, i) => {
+    const el = document.getElementById(`opt-${qid}-${i}`);
+    el.classList.remove('selected');
+    el.classList.add('disabled');
+    if (q.correct.includes(i)) el.classList.add('revealed-correct');
+    else if (ua.includes(i)) el.classList.add('revealed-wrong');
+  });
+
+  const card = document.getElementById(`q${qid}`);
+  card.classList.add(isCorrect ? 'answered-correct' : 'answered-wrong');
+
+  const status = document.getElementById(`status-${qid}`);
+  status.textContent = isCorrect ? '✓' : '✗';
+  status.style.color = isCorrect ? 'var(--correct)' : 'var(--incorrect)';
+
+  document.getElementById(`btn-${qid}`).disabled = true;
+  document.getElementById(`exp-${qid}`).classList.add('visible');
+
+  updateStats();
+}
+
+function updateStats() {
+  const total = questions.length;
+  let correct = 0, wrong = 0, pending = 0;
+
+  questions.forEach(q => {
+    if (!revealed[q.id]) { pending++; return; }
+    const ua = userAnswers[q.id] || [];
+    const isCorrect = JSON.stringify([...ua].sort()) === JSON.stringify([...q.correct].sort());
+    if (isCorrect) correct++; else wrong++;
+  });
+
+  const answered = correct + wrong;
+  document.getElementById('stCorrect').textContent = correct;
+  document.getElementById('stWrong').textContent = wrong;
+  document.getElementById('stPending').textContent = pending;
+  document.getElementById('scoreVal').textContent = `${correct}/${answered}`;
+
+  const pct = answered > 0 ? correct / total : 0;
+  document.getElementById('progressCircle').style.strokeDashoffset = 125.66 - (pct * 125.66);
+}
+
+function resetExam() {
+  if (!confirm('¿Reiniciar el examen? Se perderá todo el progreso.')) return;
+  userAnswers = {};
+  revealed = {};
+  renderExam();
+}
+
+renderExam();
+</script>
+</body>
+</html>

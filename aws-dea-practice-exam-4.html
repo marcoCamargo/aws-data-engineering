@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS DEA Practice Exam 4</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e3a5f;
+    --accent: #f90;
+    --accent2: #00d4ff;
+    --correct: #00c97a;
+    --incorrect: #ff4466;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    background: linear-gradient(135deg, #0d1b2e 0%, #0a0e1a 100%);
+    border-bottom: 2px solid var(--accent);
+    padding: 32px 40px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #fff;
+  }
+
+  header h1 span { color: var(--accent2); }
+
+  .header-meta {
+    display: flex;
+    gap: 24px;
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+
+  .progress-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .progress-bar-bg {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  .progress-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .score-panel {
+    display: flex;
+    gap: 20px;
+    padding: 6px 40px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .score-panel .s-correct { color: var(--correct); }
+  .score-panel .s-incorrect { color: var(--incorrect); }
+  .score-panel .s-total { color: var(--muted); }
+
+  main {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .question-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 28px;
+    overflow: hidden;
+    transition: border-color 0.3s;
+    animation: slideIn 0.4s ease both;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .question-card.answered-correct { border-color: var(--correct); }
+  .question-card.answered-wrong   { border-color: var(--incorrect); }
+
+  .question-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .q-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(255,153,0,0.1);
+    border: 1px solid rgba(255,153,0,0.3);
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  .multi-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent2);
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  .question-text {
+    font-size: 15px;
+    line-height: 1.6;
+    font-weight: 400;
+    color: var(--text);
+    white-space: pre-wrap;
+    flex: 1;
+  }
+
+  .options {
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    text-align: left;
+    width: 100%;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .option:hover:not(:disabled) {
+    border-color: var(--accent2);
+    background: rgba(0,212,255,0.05);
+  }
+
+  .option-marker {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    transition: all 0.2s;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: transparent;
+  }
+
+  .option.selected .option-marker {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #000;
+  }
+
+  .multi .option-marker { border-radius: 4px; }
+
+  .option.correct-choice {
+    border-color: var(--correct);
+    background: rgba(0,201,122,0.08);
+  }
+  .option.correct-choice .option-marker {
+    border-color: var(--correct);
+    background: var(--correct);
+    color: #000;
+  }
+
+  .option.wrong-choice {
+    border-color: var(--incorrect);
+    background: rgba(255,68,102,0.08);
+  }
+  .option.wrong-choice .option-marker {
+    border-color: var(--incorrect);
+    background: var(--incorrect);
+    color: #fff;
+  }
+
+  .option:disabled { cursor: default; }
+
+  .submit-wrap { padding: 0 24px 20px; }
+
+  .btn-submit {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-submit:hover { background: #ffb020; transform: translateY(-1px); }
+  .btn-submit:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+  .explanation {
+    display: none;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    background: rgba(0,0,0,0.2);
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .explanation.visible { display: block; }
+
+  .exp-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .exp-text {
+    font-size: 13px;
+    line-height: 1.65;
+    color: #94a3b8;
+  }
+
+  .result-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+  }
+
+  .result-badge.ok  { background: rgba(0,201,122,0.15); color: var(--correct); }
+  .result-badge.err { background: rgba(255,68,102,0.15); color: var(--incorrect); }
+
+  .final-summary {
+    display: none;
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    margin-bottom: 40px;
+    animation: slideIn 0.5s ease;
+  }
+
+  .final-summary.visible { display: block; }
+
+  .final-score-ring {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: conic-gradient(var(--accent) 0%, var(--accent) var(--pct), var(--border) var(--pct));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    position: relative;
+  }
+
+  .final-score-ring::before {
+    content: '';
+    position: absolute;
+    inset: 10px;
+    background: var(--surface);
+    border-radius: 50%;
+  }
+
+  .final-score-num {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--accent);
+    position: relative;
+    z-index: 1;
+  }
+
+  .final-summary h2 { font-size: 22px; margin-bottom: 8px; }
+  .final-summary p { color: var(--muted); font-size: 15px; }
+
+  .final-stats {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-top: 24px;
+  }
+
+  .stat-item { text-align: center; }
+  .stat-val { font-family: var(--mono); font-size: 24px; font-weight: 600; }
+  .stat-lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .stat-item.c .stat-val { color: var(--correct); }
+  .stat-item.w .stat-val { color: var(--incorrect); }
+
+  .btn-reset {
+    margin-top: 28px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: transparent;
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+    border-radius: 6px;
+    padding: 10px 28px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-reset:hover { background: rgba(0,212,255,0.1); }
+
+  @media (max-width: 600px) {
+    header { padding: 24px 20px; }
+    .progress-wrap, .score-panel { padding: 10px 20px; }
+    main { padding: 0 12px; }
+    .question-header { padding: 16px; }
+    .options { padding: 12px 16px; }
+    .submit-wrap { padding: 0 16px 16px; }
+    .explanation { padding: 14px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-tag">▶ Digital Cloud Training</div>
+  <h1>AWS <span>DEA</span> Practice Exam 4</h1>
+  <div class="header-meta">
+    <span>👤 Marco Antonio Camargo Funez</span>
+    <span>📧 marco.camargo.funez@gmail.com</span>
+    <span>📋 AWS Certified Data Engineer Associate</span>
+  </div>
+</header>
+
+<div class="progress-wrap">
+  <div class="progress-bar-bg">
+    <div class="progress-bar-fill" id="progressFill"></div>
+  </div>
+  <div class="progress-label" id="progressLabel">0 / 22</div>
+</div>
+
+<div class="score-panel">
+  <span class="s-correct">✓ Correctas: <strong id="cCount">0</strong></span>
+  <span class="s-incorrect">✗ Incorrectas: <strong id="wCount">0</strong></span>
+  <span class="s-total">Total respondidas: <strong id="tCount">0</strong></span>
+</div>
+
+<main id="quizMain"></main>
+
+<script>
+const questions = [
+  {
+    id: 1,
+    text: "A company is integrating a business intelligence (BI) tool with their data warehouse hosted on Microsoft SQL Server. The BI team requires regular data extracts to be transformed and stored in Amazon S3 for further analysis. The BI team needs a solution to manage this ETL process efficiently and at a low cost.\n\nWhich AWS service or feature is the most cost-effective for orchestrating an ETL pipeline that extracts data from Microsoft SQL Server, transforms it, and loads it into Amazon S3?",
+    options: [
+      "AWS Data Pipeline",
+      "AWS Glue workflows",
+      "AWS Glue DataBrew",
+      "AWS Batch"
+    ],
+    correct: [1],
+    explanation: "AWS Glue is a serverless data integration service. AWS Glue workflows enable creation and orchestration of ETL jobs that extract from various data stores, transform with custom code or built-in transforms, and load into Amazon S3. Being serverless, you only pay for compute resources consumed while jobs run. AWS Data Pipeline is not as tightly integrated with modern ETL capabilities; DataBrew focuses on data preparation, not workflow orchestration; AWS Batch is better for general batch computing, not specialized ETL orchestration."
+  },
+  {
+    id: 2,
+    text: "A data engineer is tasked with setting up a schedule for running AWS Glue ETL jobs daily where the exact timing of job execution is not critical. The primary goal is to minimize the operational costs of these ETL jobs.\n\nWhat configuration option should the data engineer choose to optimize for cost without a specific requirement on job completion times?",
+    options: [
+      "Enable job bookmarking in AWS Glue job properties to ensure incremental data processing.",
+      "Select the 'Job Timeout' option in AWS Glue job properties and set a longer duration to allow for cost-effective resource utilization.",
+      "Choose the 'FLEX' execution class in the AWS Glue job properties to leverage spot capacity for running jobs.",
+      "Apply a 'Job Delay' within AWS Glue job properties to schedule execution during non-peak hours for potential cost savings."
+    ],
+    correct: [2],
+    explanation: "The 'FLEX' execution class in AWS Glue runs jobs at a lower cost by utilizing spot instances. When precise timing is not an issue, FLEX allows Glue to optimize job execution by taking advantage of spare capacity, which can be more cost-effective than on-demand instances. Job bookmarking saves costs by processing only new/changed data but doesn't reduce compute resource costs; Job Timeout manages runtime duration, not cost optimization; Job Delay is not a specific AWS Glue feature designed for cost savings like FLEX is."
+  },
+  {
+    id: 3,
+    text: "A biotech firm is streaming complex genomic sequencing data in real-time through Amazon Kinesis Data Streams. This high-velocity data must be processed and stored in an Amazon Redshift Serverless data warehouse for immediate and subsequent analysis. The team needs a streamlined process that allows analysis as data streams in, as well as aggregation of data received over the last 24 hours.\n\nWhat is the most efficient method to ensure streaming data is processed and ready for analytical queries in Amazon Redshift Serverless with minimal management effort?",
+    options: [
+      "Implement Amazon Redshift's real-time streaming data feature to directly ingest and query data from the Kinesis data stream.",
+      "Configure an AWS Lambda function to process the Kinesis data stream and load it into Amazon Redshift Serverless.",
+      "Set up Amazon Kinesis Data Firehose to deliver the streaming data directly into Amazon Redshift Serverless.",
+      "Deploy Amazon MSK (Managed Streaming for Apache Kafka) as an intermediate buffer before loading data into Amazon Redshift Serverless."
+    ],
+    correct: [0],
+    explanation: "Amazon Redshift provides a real-time streaming ingestion feature that allows direct analysis of data as it arrives, removing the necessity for additional data processing layers or storage services. Lambda introduces more complexity and code maintenance overhead; Kinesis Data Firehose involves latency due to batching before loading into Redshift, not meeting near real-time requirements; Amazon MSK as an intermediate buffer adds unnecessary complexity and operational management."
+  },
+  {
+    id: 4,
+    text: "An e-commerce company operates a real-time analytics system processing varying data formats from customer interactions, inventory levels, and sales transactions. This includes structured data from relational databases and semi-structured data from web traffic logs. The system must accommodate schema changes for frequently updated web logs, with processed data available in S3 within a tight SLA of 15 minutes.\n\nWhich service should the data engineer choose to automate schema detection and ensure rapid ETL to Amazon S3?",
+    options: [
+      "Use AWS Data Pipeline to orchestrate the data workflow and use AWS Lambda functions for schema detection and data processing tasks.",
+      "Use AWS Glue with its schema detection feature to handle the ETL process, automatically accommodating schema changes.",
+      "Use Amazon Kinesis Data Analytics for schema detection on streaming data, and use Kinesis Data Firehose for loading into S3.",
+      "Use AWS DMS (Database Migration Service) for ongoing replication with schema conversion and continuous data loading to S3."
+    ],
+    correct: [1],
+    explanation: "AWS Glue is a fully managed ETL service with schema detection capable of handling both structured and semi-structured data. It automatically detects and adapts to schema changes, processes large volumes efficiently, and loads into S3 while managing underlying resources automatically—meeting stringent SLAs. Data Pipeline + Lambda requires custom coding and could exceed the 15-minute SLA; Kinesis Data Analytics + Firehose is not optimal for batch processing from various sources like relational databases; AWS DMS excels at database-to-database migrations, not real-time ETL of semi-structured logs."
+  },
+  {
+    id: 5,
+    text: "A company is looking to streamline its existing ETL processes, which currently use a combination of AWS Glue and Amazon EMR to move and transform data into their S3-based data lake. They need a solution to automate and orchestrate these ETL workflows efficiently.\n\nWhich AWS service should the company use to automate their ETL workflows with minimal manual intervention?",
+    options: [
+      "Use AWS Glue workflows for end-to-end ETL process automation.",
+      "Use AWS Step Functions to manage and orchestrate ETL tasks.",
+      "Use AWS Lambda to trigger ETL processes based on events.",
+      "Use Amazon Managed Workflows for Apache Airflow (Amazon MWAA) for ETL orchestration."
+    ],
+    correct: [0],
+    explanation: "AWS Glue workflows are designed to automate and orchestrate multiple ETL jobs. They provide a managed, integrated environment specifically built for ETL processes, allowing complex multi-job workflows with triggers, data sources, and targets—all within AWS Glue, eliminating additional infrastructure management. Step Functions requires more setup and is a general-purpose service, not specialized for ETL; Lambda is event-driven compute, not an orchestration service; Amazon MWAA is more complex and adds overhead when ETL is already built in Glue and EMR."
+  },
+  {
+    id: 6,
+    text: "A large enterprise is planning to migrate several on-premises applications to AWS. Before initiating the migration, the enterprise wants to understand the dependencies and performance characteristics of its on-premises applications. They also seek an efficient method to migrate these applications with minimal downtime.\n\nWhich combination of AWS services should the enterprise use to discover application dependencies and migrate applications to AWS?",
+    options: [
+      "Use AWS Application Discovery Service to identify dependencies and AWS Application Migration Service (MGN) for the migration of applications.",
+      "Implement AWS Systems Manager for application discovery and AWS CloudFormation for orchestrating the migration process.",
+      "Use AWS Config for discovering application configurations and Amazon EC2 Image Builder for creating machine images for migration.",
+      "Apply AWS CloudTrail for monitoring application activity and AWS Elastic Beanstalk for automating the deployment of migrated applications."
+    ],
+    correct: [0],
+    explanation: "AWS Application Discovery Service is specifically designed to identify IT assets and dependencies for cloud migration planning. AWS Application Migration Service (MGN) automates the migration of existing applications and servers with minimal downtime. Systems Manager is not specialized for migration dependency discovery; CloudFormation provisions AWS resources but doesn't handle migrating existing on-premises apps; Config tracks AWS resource configurations; CloudTrail is for auditing, not migration."
+  },
+  {
+    id: 7,
+    text: "A large financial institution plans to migrate several terabytes of critical financial data from its on-premises data center to AWS. The migration needs to be secure, consistent, and should have minimal impact on the institution's existing network bandwidth.\n\nWhich AWS service should the institution use to migrate this large volume of data while ensuring network security and minimal impact on existing bandwidth?",
+    options: [
+      "Use AWS Snowball to physically transfer the data to AWS.",
+      "Implement AWS Direct Connect for a dedicated network connection to AWS.",
+      "Utilize Amazon S3 Transfer Acceleration for faster data upload over the internet.",
+      "Configure a VPN connection over the internet to securely transfer the data to AWS."
+    ],
+    correct: [1],
+    explanation: "AWS Direct Connect provides a dedicated network connection between the on-premises data center and AWS, enabling large-volume data transfer securely and consistently. It reduces network costs, increases bandwidth throughput, and minimizes impact on existing internet bandwidth. Snowball involves physical shipping and is less suitable for continuous consistent transfers; S3 Transfer Acceleration uses the public internet and lacks dedicated bandwidth; VPN uses public internet, which can be less reliable and slower for large-scale migrations."
+  },
+  {
+    id: 8,
+    text: "A financial services firm is experiencing rising costs associated with monthly data migrations from their on-premises Oracle database to AWS. They need a more economical method to transfer their extensive transaction records to an Amazon RDS for Oracle instance with minimal disruption to their ongoing operations.\n\nWhat AWS service should the firm utilize to achieve a cost-efficient and low-downtime migration?",
+    options: [
+      "Use AWS DataSync to schedule and automate the data transfer process.",
+      "Establish AWS Direct Connect for a dedicated network connection to AWS.",
+      "Configure an AWS Snowball job to handle the end-of-month data transfers.",
+      "Implement AWS Database Migration Service (AWS DMS) to manage ongoing data migrations."
+    ],
+    correct: [3],
+    explanation: "AWS DMS is specifically designed to facilitate database migrations to AWS in a simple and secure manner, supporting Oracle and many other platforms. It allows continuous data replication with minimal downtime, handling end-of-month migrations cost-effectively by only incurring costs during the migration period. DataSync is for storage-to-storage transfers, not database migrations with schema handling; Direct Connect provides network connectivity but not a migration service itself; Snowball is for large bulk transfers and not suitable for incremental ongoing database migrations."
+  },
+  {
+    id: 9,
+    text: "A video production company stores large video files in Amazon S3 using the S3 Standard storage class. After initial editing, these files are infrequently accessed but need to be readily available for future use. The company wants to optimize storage costs while ensuring that files remain accessible with minimal retrieval time.\n\nWhich S3 Lifecycle policy should the company implement for their video files?",
+    options: [
+      "Transition objects to S3 Intelligent-Tiering after 30 days, then to S3 Glacier after 1 year.",
+      "Transition objects to S3 One Zone-Infrequent Access (S3 One Zone-IA) after 60 days, then to S3 Glacier Deep Archive after 6 months.",
+      "Transition objects to S3 Standard-Infrequent Access (S3 Standard-IA) after 90 days, retaining in the same class thereafter.",
+      "Transition objects to S3 Glacier after 30 days, then to S3 Glacier Deep Archive after 1 year."
+    ],
+    correct: [2],
+    explanation: "S3 Standard-IA is ideal for data accessed less frequently but requiring rapid access when needed. Transitioning after 90 days reduces storage costs while maintaining high availability and fast access. Retaining in Standard-IA balances cost-effectiveness with accessibility for future editing needs. Transitioning to Glacier after 1 year introduces slow retrieval times unsuitable for video editing; S3 One Zone-IA lacks multi-AZ resilience; moving to Glacier after only 30 days is too soon for files still needed promptly."
+  },
+  {
+    id: 10,
+    text: "A news website tracks user interactions and search queries to gain insights into reader preferences and content engagement. The website needs to process and analyze this data in real-time to quickly adapt their content strategy. The solution must support complex search capabilities and real-time analytics.\n\nWhich AWS service should the website use to store and analyze the user interaction data for real-time search and analytics?",
+    options: [
+      "Use Amazon RDS to capture user interaction data and Amazon QuickSight for real-time analytics and search capabilities.",
+      "Implement Amazon Kinesis Data Streams to collect data and Amazon Redshift for real-time search and analytics.",
+      "Capture user data in Amazon S3 and use Amazon Athena for real-time analytics and search functionalities.",
+      "Store the interaction data in Amazon DynamoDB and use Amazon Elasticsearch Service for complex search and real-time analytics."
+    ],
+    correct: [3],
+    explanation: "Amazon Elasticsearch Service (now OpenSearch Service) is well-suited for sophisticated search capabilities and real-time analytics. Storing raw data in Amazon DynamoDB provides a scalable NoSQL solution, and integrating with Elasticsearch enables complex searches and real-time insights into reader behavior. Amazon RDS + QuickSight is not optimized for real-time search at scale; Kinesis + Redshift is better for warehousing and batch analytics than real-time search; S3 + Athena is suited for ad-hoc querying, not sophisticated real-time search."
+  },
+  {
+    id: 11,
+    text: "A data engineer is developing an AWS Step Functions workflow to manage a batch image processing task. Each image in a large dataset requires an individual enhancement algorithm to be applied. The workflow needs to handle these tasks concurrently to optimize processing time.\n\nWhich state in AWS Step Functions should the data engineer use to ensure simultaneous processing of multiple images?",
+    options: [
+      "Use the Parallel state to run image processing tasks concurrently.",
+      "Use the Choice state to direct each image to its specific processing task.",
+      "Use the Map state to apply the enhancement algorithm to each image individually, yet concurrently.",
+      "Use the Wait state to manage the sequencing of the image processing tasks."
+    ],
+    correct: [2],
+    explanation: "The Map state in AWS Step Functions is designed specifically for running a set of tasks in parallel, where each task is similar but applied to different items in a collection. It allows applying the image enhancement algorithm to each image concurrently without manual orchestration. The Parallel state is for running different tasks or workflows in parallel, not iterating the same process over a collection; Choice state is for decision-making between branches; Wait state introduces a pause, counterproductive to concurrent processing."
+  },
+  {
+    id: 12,
+    text: "A mobile app development company needs a database solution to manage user profiles and app settings. The data structure includes key-value pairs and needs to support fast, millisecond response times for read and write operations, regardless of traffic spikes. The solution should be fully managed to minimize maintenance overhead.\n\nWhich AWS service is most suitable for storing and retrieving the user profile data?",
+    options: [
+      "Use Amazon RDS with provisioned IOPS to ensure high performance for the key-value pairs.",
+      "Implement Amazon DynamoDB for its key-value storage capabilities and fast, consistent performance.",
+      "Configure Amazon S3 to store user data as objects, utilizing S3 Select for efficient data retrieval.",
+      "Deploy Amazon ElastiCache to manage user profile data in-memory for rapid access."
+    ],
+    correct: [1],
+    explanation: "Amazon DynamoDB is a fully managed NoSQL database service providing fast and predictable performance with seamless scalability. It is ideal for key-value data structures, supports high request rates with low latencies, and requires minimal maintenance overhead. Amazon RDS is a relational database more suited for complex transactional workloads, not optimized for key-value access patterns; S3 is not designed for high-speed, low-latency read/write; ElastiCache is primarily a caching layer, not a standalone database with persistence."
+  },
+  {
+    id: 13,
+    text: "A data engineering team needs to manage and query a continuously evolving dataset of customer transactions stored in Amazon S3. They use Amazon Athena for querying and require an automated solution to handle schema changes in the dataset.\n\nWhat AWS service should the team use to efficiently manage the schema and ensure seamless integration with Athena for updated data queries?",
+    options: [
+      "Implement AWS Data Pipeline for automated data transfer and schema updates.",
+      "Use AWS Glue Data Catalog for schema management and metadata storage.",
+      "Configure Amazon Redshift Spectrum to manage schema changes.",
+      "Apply Amazon RDS for automated database management and schema updates."
+    ],
+    correct: [1],
+    explanation: "The AWS Glue Data Catalog is a fully managed, centralized metadata repository compatible with Amazon Athena. Glue Crawlers can automatically detect and reflect schema changes in S3 data, making the updated schema immediately available to Athena without manual intervention. AWS Data Pipeline is for data transfer and orchestration, not schema management; Redshift Spectrum is a feature within Redshift for querying S3, not a standalone schema management service; Amazon RDS manages relational databases and does not integrate with Athena for querying S3 data."
+  },
+  {
+    id: 14,
+    text: "A software development team is building a Java-based application that needs to connect to an Amazon Aurora MySQL database. The team must choose the most suitable database connection protocol for their application to ensure compatibility and optimal performance.\n\nWhich database connection protocol should the team use?",
+    options: [
+      "Use the Open Database Connectivity (ODBC).",
+      "Use the Java Database Connectivity (JDBC).",
+      "Use the Simple Object Access Protocol (SOAP).",
+      "Use the Advanced Message Queuing Protocol (AMQP)."
+    ],
+    correct: [1],
+    explanation: "JDBC is a Java API specifically designed for Java applications to access databases. It is the standard database connectivity protocol for Java, offering compatibility and optimal performance for interacting with databases like Amazon Aurora MySQL. ODBC is a general-purpose API more commonly used with C and C++, not as optimal for Java; SOAP is a web services protocol for exchanging structured information, not for database connectivity; AMQP is a message-oriented middleware protocol for asynchronous message queues, not database connections."
+  },
+  {
+    id: 15,
+    text: "A business maintains a customer database within Amazon Redshift and needs to retrieve records for customers whose first names begin with \"Jo\" or \"Ja\". The database has a table titled 'CustomerDetails' with a column 'FirstName'.\n\nWhich SQL query should the business use to efficiently obtain the required records?",
+    options: [
+      "SELECT * FROM CustomerDetails WHERE FirstName LIKE 'Jo%' OR FirstName LIKE 'Ja%';",
+      "SELECT * FROM CustomerDetails WHERE FirstName STARTS WITH 'Jo' OR FirstName STARTS WITH 'Ja';",
+      "SELECT * FROM CustomerDetails WHERE FirstName = 'Jo*' OR FirstName = 'Ja*';",
+      "SELECT * FROM CustomerDetails WHERE FirstName IN ('Jo%', 'Ja%');"
+    ],
+    correct: [0],
+    explanation: "The LIKE operator with the % wildcard matches any sequence of characters. 'Jo%' matches any first name beginning with 'Jo' and 'Ja%' matches any beginning with 'Ja'. STARTS WITH is not a valid SQL operator; the = operator is for exact matches and does not interpret * as a wildcard; the IN clause specifies exact values, not patterns, so it does not support wildcard matching."
+  },
+  {
+    id: 16,
+    text: "A data engineer maintains custom Python scripts that perform a data formatting process used by many AWS Lambda functions. Currently, when the data engineer modifies the Python scripts, they must manually update all the Lambda functions, which is time-consuming and prone to errors.\n\nThe data engineer needs a streamlined solution to update the Python scripts across all Lambda functions with minimal manual effort.\n\nWhich solution will meet this requirement?",
+    options: [
+      "Store a pointer to the custom Python scripts in the execution context object in a shared Amazon S3 bucket.",
+      "Package the custom Python scripts into Lambda layers. Apply the Lambda layers to the Lambda functions.",
+      "Store a pointer to the custom Python scripts in environment variables in a shared Amazon S3 bucket.",
+      "Assign the same alias to each Lambda function. Call each Lambda function by specifying the function's alias."
+    ],
+    correct: [1],
+    explanation: "Lambda layers are specifically designed for sharing code such as libraries or scripts across multiple Lambda functions. By centralizing the Python scripts in a layer, updating requires only creating a new layer version—all associated Lambda functions can reference the updated layer without any manual code updates to individual functions. Storing scripts in S3 and referencing them at runtime adds latency and requires downloading at execution time; environment variable pointers still require runtime downloads and don't automate updates; Lambda aliases manage function versions, not shared code libraries."
+  },
+  {
+    id: 17,
+    text: "A data analyst needs to set up a sequence of Amazon Athena queries, which typically take more than 15 minutes each, to execute automatically on a daily schedule. The solution should minimize costs while ensuring that each query is initiated only after the preceding one completes.\n\nWhich of the following approaches should the analyst implement to meet these requirements in the most cost-effective way? (Select TWO)",
+    multi: true,
+    options: [
+      "Schedule the queries using Amazon EventBridge to trigger AWS Lambda functions that execute the Athena queries using the start_query_execution API call.",
+      "Use AWS Step Functions to manage the workflow, with a Lambda function to start Athena queries and an integrated polling mechanism to check query completion before proceeding.",
+      "Configure AWS Batch jobs to initiate Athena queries sequentially, using job dependencies to ensure the execution order.",
+      "Implement a serverless AWS Glue Python shell job with a built-in wait mechanism to poll the query status using get_query_execution, triggering the next query upon the completion of the previous one.",
+      "Use Amazon Managed Workflows for Apache Airflow (Amazon MWAA) to design a DAG that orchestrates the Athena queries, managing dependencies and execution state."
+    ],
+    correct: [1, 3],
+    explanation: "AWS Step Functions can coordinate serverless workflows with state management and built-in error handling—a Lambda starts the Athena query, and a wait/poll state checks for completion before proceeding to the next query. You pay per state transition, not for continuous running time. AWS Glue Python shell jobs are serverless and can poll query status using get_query_execution, triggering the next query on completion—billed by the second, cost-effective for long-running queries. EventBridge + Lambda fails because Lambda has a 15-minute maximum execution time; AWS Batch is not designed for orchestrating Athena queries; MWAA adds unnecessary complexity and cost for this use case."
+  },
+  {
+    id: 18,
+    text: "A mobile app tracks user activity data, which is continuously streamed to Amazon Kinesis Data Streams. The app requires a solution to process this data in real-time and update user profiles stored in Amazon DynamoDB based on the activity data.\n\nWhat combination of AWS services should be used for real-time processing of the stream and updating the user profiles in DynamoDB?",
+    options: [
+      "Deploy Amazon EC2 instances to consume and process the stream, then write to DynamoDB.",
+      "Use AWS Lambda to process data from Kinesis Data Streams and update records in Amazon DynamoDB.",
+      "Configure Amazon EMR to handle stream processing and update DynamoDB with batch jobs.",
+      "Use AWS Glue to extract and transform streaming data, and load into DynamoDB."
+    ],
+    correct: [1],
+    explanation: "AWS Lambda can be directly triggered by Amazon Kinesis Data Streams, enabling real-time processing of user activity data as it arrives. The Lambda function then updates user profiles in DynamoDB. This setup is serverless, scales automatically with incoming data volume, and requires minimal management overhead. EC2 requires manual scaling and greater operational overhead; EMR is for large-scale batch processing, not real-time stream processing; AWS Glue is a batch ETL service, not the most efficient for immediate streaming data processing."
+  },
+  {
+    id: 19,
+    text: "A data engineering team at a media company is managing a large collection of video files stored in an Amazon S3 bucket. Whenever a new video file is uploaded, they need to initiate a process that extracts metadata from the video file and stores this metadata in a database for cataloging purposes.\n\nWhat AWS feature should the team use to automatically trigger the metadata extraction process as soon as a new video file is uploaded?",
+    options: [
+      "Configure Amazon S3 Event Notifications to trigger an AWS Lambda function for the metadata extraction process when a new video file is uploaded.",
+      "Set up an AWS Lambda function to poll the S3 bucket for new files at regular intervals and initiate the metadata extraction process.",
+      "Utilize Amazon S3 Transfer Acceleration to detect new file uploads and trigger an AWS Step Functions workflow for metadata extraction.",
+      "Create an Amazon EventBridge rule to monitor the S3 bucket and invoke an AWS Batch job for each new video file upload."
+    ],
+    correct: [0],
+    explanation: "Amazon S3 Event Notifications can be configured to automatically trigger a Lambda function whenever a new video file is uploaded to an S3 bucket. This ensures metadata extraction begins immediately and automatically, with minimal operational overhead and no need for polling or manual intervention. Polling the S3 bucket at regular intervals is inefficient and introduces delays; S3 Transfer Acceleration speeds up file uploads but does not detect or trigger processing workflows; EventBridge is generally more suited for system-wide monitoring and is less direct for individual file upload triggers."
+  },
+  {
+    id: 20,
+    text: "A multinational corporation wants to aggregate, analyze, and visualize logs from various AWS services and on-premises resources for business intelligence. The solution must provide capabilities for log aggregation, analysis, and building interactive visualizations for reporting and decision-making.\n\nWhich combination of AWS services should the corporation use?",
+    options: [
+      "Use Amazon CloudWatch for log aggregation, Amazon Athena for analysis, and Amazon QuickSight for visualization.",
+      "Use AWS Glue for log aggregation, Amazon Redshift for analysis, and AWS Lambda for visualization.",
+      "Use AWS CloudTrail for log aggregation, Amazon EMR for analysis, and Amazon S3 for visualization.",
+      "Use Amazon Kinesis Data Firehose for log aggregation, Amazon RDS for analysis, and Amazon EC2 for visualization."
+    ],
+    correct: [0],
+    explanation: "Amazon CloudWatch effectively aggregates logs from various AWS services and on-premises resources. Amazon Athena is serverless and can analyze those logs with SQL queries without infrastructure management. Amazon QuickSight creates interactive visualizations and BI reports, integrating with Athena to easily visualize query results. AWS Glue is an ETL service, not a log aggregator; CloudTrail is for auditing AWS API activity, not BI log aggregation; Kinesis Firehose is for streaming data delivery; neither Lambda nor EC2 provide visualization capabilities."
+  },
+  {
+    id: 21,
+    text: "A software company has developed a serverless application using AWS Lambda and Amazon DynamoDB. The Lambda function needs to access a specific DynamoDB table to read and write data. The company emphasizes security best practices, particularly the principle of least privilege.\n\nHow should the company configure the AWS Lambda function's IAM role to adhere to the principle of least privilege while enabling necessary access to the DynamoDB table?",
+    options: [
+      "Attach the AWS managed policy AmazonDynamoDBFullAccess to the Lambda function's IAM role.",
+      "Create an IAM policy that grants full access to AWS services and attach it to the Lambda function's IAM role.",
+      "Create a custom IAM policy with specific permissions to GetItem, PutItem, and UpdateItem on the DynamoDB table and attach it to the Lambda function's IAM role.",
+      "Use the AWS managed policy AWSLambdaFullAccess for the Lambda function's IAM role to ensure it has sufficient permissions."
+    ],
+    correct: [2],
+    explanation: "A custom IAM policy granting only GetItem, PutItem, and UpdateItem on the specific DynamoDB table follows the principle of least privilege—granting only what is necessary for the task. AmazonDynamoDBFullAccess provides full access to all DynamoDB tables and operations, violating least privilege; full access to all AWS services is a serious security risk; AWSLambdaFullAccess provides Lambda-related permissions but may not include DynamoDB operations and grants unnecessary permissions beyond what is needed."
+  },
+  {
+    id: 22,
+    text: "A healthcare application hosted on AWS uses Amazon EC2 instances to manage sensitive patient data that must comply with regulatory security standards. The data is stored on EBS volumes attached to the EC2 instances. The company's security policy mandates that all data at rest be encrypted.\n\nWhich action should the IT department take to secure the EBS volumes?",
+    options: [
+      "Encrypt the EBS volumes with Amazon S3 server-side encryption.",
+      "Use AWS Certificate Manager to apply SSL/TLS certificates to the EBS volumes.",
+      "Enable EBS encryption with AWS Key Management Service (KMS) keys.",
+      "Run a third-party encryption tool to encrypt data on the EBS volumes before storage."
+    ],
+    correct: [2],
+    explanation: "Amazon EBS supports encryption of volumes and snapshots using AWS KMS keys, ensuring all data at rest is secured with managed keys that meet regulatory compliance requirements. Encryption happens transparently without affecting EBS volume performance. Amazon S3 server-side encryption is for S3 objects, not EBS volumes; AWS Certificate Manager provides SSL/TLS certificates for in-transit encryption, not at-rest encryption for EBS; third-party tools add operational overhead in managing encryption processes and keys compared to native EBS encryption."
+  },
+  {
+    id: 23,
+    text: "A data engineer is setting up an AWS Glue job to process data hosted in an Amazon S3 bucket. Although the IAM role and AWS Glue connections are correctly configured, an error message appears during job execution, suggesting an issue with the S3 VPC endpoint configuration.\n\nTo remedy this and successfully connect the AWS Glue job to the S3 bucket, what action should the data engineer take?",
+    options: [
+      "Confirm that the S3 endpoint policy attached to the VPC endpoint allows traffic from the AWS Glue service.",
+      "Modify the IAM role attached to the AWS Glue job to include the necessary permissions for S3 access.",
+      "Adjust the VPC endpoint's security group to permit outbound connections to the S3 service.",
+      "Ensure that the VPC endpoint for S3 is correctly associated with the subnet used by the AWS Glue job."
+    ],
+    correct: [0],
+    explanation: "The most common cause for this error is that the S3 VPC endpoint policy does not allow the necessary traffic from the AWS Glue service. VPC endpoint policies provide granular control over endpoint use, and if AWS Glue is not explicitly allowed, the job cannot access S3 data. The IAM role is already confirmed as correctly configured, so modifying it is not the solution; security groups control network traffic to AWS resources but AWS Glue does not interact with S3 gateways at the security group level; subnet association is necessary but the error specifically points to endpoint configuration."
+  },
+  {
+    id: 24,
+    text: "A global enterprise is using Amazon RDS for its production environment. The CISO mandates a solution to ensure the ability to perform security analysis and audit database activity, including tracking which user performed which action on the database. The company requires that the solution should also track API calls made to the Amazon RDS service, even if they do not directly modify the database.\n\nWhich AWS service should the company use to meet these requirements?",
+    options: [
+      "Activate AWS CloudTrail to log, continuously monitor, and retain account activity related to actions made on the Amazon RDS service.",
+      "Enable Amazon RDS Enhanced Monitoring to monitor database engine-specific metrics, which can be used for auditing purposes.",
+      "Implement Amazon RDS Performance Insights to gather data on database load and filter it by SQL statement, wait event, user, and host.",
+      "Use AWS Config to record and evaluate the configurations of your RDS resources and track changes to the environment."
+    ],
+    correct: [0],
+    explanation: "AWS CloudTrail provides event history of AWS account activity including actions through the Management Console, SDKs, CLI, and other AWS services. It enables governance, compliance, and risk auditing by capturing all API calls made to the Amazon RDS service—exactly what the CISO requires. RDS Enhanced Monitoring provides OS-level metrics but does not track user activity or API calls; Performance Insights is a database performance tuning tool, not an auditing service; AWS Config records resource configurations and changes, but is not designed for auditing specific database user actions or RDS API calls."
+  },
+  {
+    id: 25,
+    text: "A data scientist is setting up a new machine learning project in Amazon SageMaker and plans to use AWS Glue for data preprocessing tasks. However, when attempting to launch a data preprocessing job from SageMaker, the scientist encounters a permission error.\n\nWhat action should the data scientist take to resolve this issue and successfully run AWS Glue jobs from Amazon SageMaker?",
+    options: [
+      "Attach the AmazonSageMakerFullAccess policy to the data scientist's IAM role.",
+      "Update the trust policy in the data scientist's IAM role to include the AWS Glue service principal.",
+      "Assign the AWSGlueServiceNotebookRole managed policy to the data scientist's IAM user.",
+      "Ensure the data scientist's IAM role has the appropriate Glue permissions and a trust relationship with SageMaker."
+    ],
+    correct: [3],
+    explanation: "For SageMaker to run AWS Glue jobs, the IAM role must have the necessary permissions to access AWS Glue resources AND a trust relationship with the SageMaker service—allowing SageMaker to assume the role on behalf of the data scientist. Both components are required for integrated AWS services. AmazonSageMakerFullAccess may not include specific Glue permissions; adding the Glue service principal to the trust policy allows Glue to assume the role (opposite direction needed here); AWSGlueServiceNotebookRole is for Glue notebook operations, not for SageMaker accessing Glue."
+  }
+];
+
+let userAnswers = {};
+let score = { correct: 0, wrong: 0 };
+
+function renderQuiz() {
+  const main = document.getElementById('quizMain');
+  main.innerHTML = '';
+
+  const summary = document.createElement('div');
+  summary.className = 'final-summary';
+  summary.id = 'finalSummary';
+  summary.innerHTML = `
+    <div class="final-score-ring" id="scoreRing">
+      <div class="final-score-num" id="scoreNum">0%</div>
+    </div>
+    <h2 id="summaryTitle">Examen Completado</h2>
+    <p id="summaryMsg"></p>
+    <div class="final-stats">
+      <div class="stat-item c"><div class="stat-val" id="fCorrect">0</div><div class="stat-lbl">Correctas</div></div>
+      <div class="stat-item w"><div class="stat-val" id="fWrong">0</div><div class="stat-lbl">Incorrectas</div></div>
+      <div class="stat-item"><div class="stat-val" id="fTotal">0</div><div class="stat-lbl">Total</div></div>
+    </div>
+    <button class="btn-reset" onclick="resetQuiz()">↺ Reiniciar examen</button>
+  `;
+  main.appendChild(summary);
+
+  questions.forEach((q, qi) => {
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.id = `card-${q.id}`;
+    card.style.animationDelay = `${(qi * 0.05).toFixed(2)}s`;
+
+    const header = document.createElement('div');
+    header.className = 'question-header';
+
+    const numBadge = document.createElement('div');
+    numBadge.className = 'q-num';
+    numBadge.textContent = `Q${String(qi+1).padStart(2,'0')}`;
+
+    header.appendChild(numBadge);
+
+    if (q.multi) {
+      const mb = document.createElement('div');
+      mb.className = 'multi-badge';
+      mb.textContent = 'MULTI';
+      header.appendChild(mb);
+    }
+
+    const qtext = document.createElement('div');
+    qtext.className = 'question-text';
+    qtext.textContent = q.text;
+    header.appendChild(qtext);
+
+    card.appendChild(header);
+
+    const optWrap = document.createElement('div');
+    optWrap.className = `options${q.multi ? ' multi' : ''}`;
+    optWrap.id = `opts-${q.id}`;
+
+    q.options.forEach((opt, oi) => {
+      const btn = document.createElement('button');
+      btn.className = 'option';
+      btn.id = `opt-${q.id}-${oi}`;
+
+      const marker = document.createElement('div');
+      marker.className = 'option-marker';
+      marker.textContent = '✓';
+
+      const label = document.createElement('span');
+      label.textContent = opt;
+
+      btn.appendChild(marker);
+      btn.appendChild(label);
+      btn.addEventListener('click', () => handleSelect(q, oi));
+      optWrap.appendChild(btn);
+    });
+
+    card.appendChild(optWrap);
+
+    const submitWrap = document.createElement('div');
+    submitWrap.className = 'submit-wrap';
+    submitWrap.id = `sw-${q.id}`;
+
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'btn-submit';
+    submitBtn.textContent = 'Confirmar respuesta';
+    submitBtn.disabled = true;
+    submitBtn.id = `sb-${q.id}`;
+    submitBtn.addEventListener('click', () => handleSubmit(q));
+
+    submitWrap.appendChild(submitBtn);
+    card.appendChild(submitWrap);
+
+    const expDiv = document.createElement('div');
+    expDiv.className = 'explanation';
+    expDiv.id = `exp-${q.id}`;
+    expDiv.innerHTML = `<div class="exp-title">◆ Explicación</div><div class="exp-text">${q.explanation}</div>`;
+    card.appendChild(expDiv);
+
+    main.appendChild(card);
+  });
+
+  document.getElementById('progressLabel').textContent = `0 / ${questions.length}`;
+  updateProgress();
+}
+
+function handleSelect(q, oi) {
+  if (userAnswers[q.id] && userAnswers[q.id].submitted) return;
+
+  if (!userAnswers[q.id]) userAnswers[q.id] = { selected: new Set(), submitted: false };
+
+  if (!q.multi) {
+    userAnswers[q.id].selected.clear();
+    userAnswers[q.id].selected.add(oi);
+    q.options.forEach((_, i) => {
+      document.getElementById(`opt-${q.id}-${i}`).classList.toggle('selected', i === oi);
+    });
+    document.getElementById(`sb-${q.id}`).disabled = false;
+  } else {
+    const sel = userAnswers[q.id].selected;
+    if (sel.has(oi)) sel.delete(oi);
+    else sel.add(oi);
+    q.options.forEach((_, i) => {
+      document.getElementById(`opt-${q.id}-${i}`).classList.toggle('selected', sel.has(i));
+    });
+    document.getElementById(`sb-${q.id}`).disabled = sel.size === 0;
+  }
+}
+
+function handleSubmit(q) {
+  if (!userAnswers[q.id] || userAnswers[q.id].submitted) return;
+
+  const ua = userAnswers[q.id];
+  ua.submitted = true;
+
+  const selected = [...ua.selected];
+  const correct = q.correct;
+  const isCorrect = selected.length === correct.length &&
+    selected.every(s => correct.includes(s)) &&
+    correct.every(c => selected.includes(c));
+
+  if (isCorrect) score.correct++;
+  else score.wrong++;
+
+  q.options.forEach((_, i) => {
+    const btn = document.getElementById(`opt-${q.id}-${i}`);
+    btn.disabled = true;
+    btn.classList.remove('selected');
+    if (correct.includes(i)) btn.classList.add('correct-choice');
+    else if (selected.includes(i)) btn.classList.add('wrong-choice');
+  });
+
+  const card = document.getElementById(`card-${q.id}`);
+  card.classList.add(isCorrect ? 'answered-correct' : 'answered-wrong');
+
+  const expDiv = document.getElementById(`exp-${q.id}`);
+  const badge = document.createElement('div');
+  badge.className = `result-badge ${isCorrect ? 'ok' : 'err'}`;
+  badge.innerHTML = isCorrect ? '✓ Respuesta correcta' : '✗ Respuesta incorrecta';
+  expDiv.insertBefore(badge, expDiv.firstChild);
+  expDiv.classList.add('visible');
+
+  document.getElementById(`sb-${q.id}`).style.display = 'none';
+
+  updateScore();
+  updateProgress();
+  checkAllAnswered();
+}
+
+function updateScore() {
+  document.getElementById('cCount').textContent = score.correct;
+  document.getElementById('wCount').textContent = score.wrong;
+  document.getElementById('tCount').textContent = score.correct + score.wrong;
+}
+
+function updateProgress() {
+  const answered = Object.values(userAnswers).filter(a => a.submitted).length;
+  const total = questions.length;
+  const pct = Math.round((answered / total) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${answered} / ${total}`;
+}
+
+function checkAllAnswered() {
+  const answered = Object.values(userAnswers).filter(a => a.submitted).length;
+  if (answered === questions.length) showFinalSummary();
+}
+
+function showFinalSummary() {
+  const total = questions.length;
+  const pct = Math.round((score.correct / total) * 100);
+  const ring = document.getElementById('scoreRing');
+  ring.style.setProperty('--pct', pct + '%');
+  document.getElementById('scoreNum').textContent = pct + '%';
+  document.getElementById('fCorrect').textContent = score.correct;
+  document.getElementById('fWrong').textContent = score.wrong;
+  document.getElementById('fTotal').textContent = total;
+
+  let msg = '';
+  if (pct >= 80) msg = '¡Excelente! Estás listo para el examen AWS DEA.';
+  else if (pct >= 60) msg = 'Buen trabajo. Repasa los temas con errores.';
+  else msg = 'Sigue practicando. Revisa las explicaciones con detenimiento.';
+
+  document.getElementById('summaryMsg').textContent = msg;
+  const summary = document.getElementById('finalSummary');
+  summary.classList.add('visible');
+  summary.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function resetQuiz() {
+  userAnswers = {};
+  score = { correct: 0, wrong: 0 };
+  renderQuiz();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+renderQuiz();
+</script>
+</body>
+</html>
