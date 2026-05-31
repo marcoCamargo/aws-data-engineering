@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS DEA Domain 3 – Data Operations and Support</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1e2530;
+    --border: #30363d;
+    --accent: #f7931e;
+    --accent2: #ff6b35;
+    --correct: #3fb950;
+    --incorrect: #f85149;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --aws: #f7931e;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, #1a1200 0%, #0d1117 60%);
+    border-bottom: 1px solid var(--border);
+    padding: 40px 0 30px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -80px;
+    width: 340px; height: 340px;
+    background: radial-gradient(circle, rgba(247,147,30,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 28px;
+    position: relative;
+  }
+  .badge {
+    display: inline-block;
+    background: rgba(247,147,30,0.15);
+    border: 1px solid rgba(247,147,30,0.4);
+    color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    padding: 4px 12px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+  header h1 {
+    font-size: clamp(22px, 4vw, 34px);
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  header h1 span { color: var(--accent); }
+  .meta-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+  }
+  .meta-item {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .meta-item strong { color: var(--text); }
+
+  /* PROGRESS BAR */
+  .progress-bar-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 28px 0;
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 6px;
+  }
+  .progress-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+
+  /* CONTROLS */
+  .controls {
+    max-width: 900px;
+    margin: 18px auto 0;
+    padding: 0 28px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 8px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+
+  /* MAIN */
+  main {
+    max-width: 900px;
+    margin: 30px auto 60px;
+    padding: 0 28px;
+  }
+
+  /* QUESTION CARD */
+  .q-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    transition: border-color 0.3s;
+    animation: fadeSlide 0.4s ease both;
+  }
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .q-card.answered-correct { border-color: rgba(63,185,80,0.5); }
+  .q-card.answered-wrong   { border-color: rgba(248,81,73,0.4); }
+
+  .q-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 22px 24px 18px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .q-num {
+    flex-shrink: 0;
+    width: 34px; height: 34px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  .q-text {
+    flex: 1;
+    font-size: 14.5px;
+    color: var(--text);
+    font-weight: 400;
+  }
+  .q-toggle {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    color: var(--muted);
+    transition: transform 0.3s;
+    margin-top: 6px;
+  }
+  .q-card.open .q-toggle { transform: rotate(180deg); }
+
+  .q-body {
+    display: none;
+    padding: 0 24px 24px;
+  }
+  .q-card.open .q-body { display: block; }
+
+  /* SCENARIO TAG */
+  .scenario-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* OPTIONS */
+  .options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    font-size: 13.5px;
+  }
+  .option:hover { border-color: var(--accent); background: rgba(247,147,30,0.06); }
+  .option.selected { border-color: var(--accent); background: rgba(247,147,30,0.1); }
+  .option.correct-ans  { border-color: var(--correct); background: rgba(63,185,80,0.1); }
+  .option.wrong-ans    { border-color: var(--incorrect); background: rgba(248,81,73,0.1); }
+  .option.reveal-correct { border-color: var(--correct); background: rgba(63,185,80,0.07); }
+
+  .opt-marker {
+    flex-shrink: 0;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    transition: all 0.2s;
+    margin-top: 1px;
+  }
+  .option.selected .opt-marker { border-color: var(--accent); color: var(--accent); background: rgba(247,147,30,0.15); }
+  .option.correct-ans .opt-marker, .option.reveal-correct .opt-marker  { border-color: var(--correct); color: var(--correct); background: rgba(63,185,80,0.15); }
+  .option.wrong-ans .opt-marker   { border-color: var(--incorrect); color: var(--incorrect); background: rgba(248,81,73,0.15); }
+
+  /* MULTI SELECT NOTE */
+  .multi-note {
+    font-size: 11px;
+    color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 10px;
+  }
+
+  /* CHECK BUTTON */
+  .check-btn {
+    padding: 9px 22px;
+    background: var(--accent);
+    border: none;
+    border-radius: 7px;
+    color: #000;
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .check-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .check-btn:disabled { opacity: 0.3; cursor: default; transform: none; }
+
+  /* FEEDBACK */
+  .feedback {
+    margin-top: 16px;
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 13.5px;
+    animation: fadeSlide 0.3s ease;
+  }
+  .fb-result {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .fb-result.correct { background: rgba(63,185,80,0.18); color: var(--correct); }
+  .fb-result.wrong   { background: rgba(248,81,73,0.15); color: var(--incorrect); }
+  .fb-explanation {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 16px;
+    color: var(--muted);
+    line-height: 1.75;
+  }
+  .fb-explanation strong { color: var(--text); }
+  .fb-explanation .expl-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .incorrect-item {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(248,81,73,0.06);
+    border-left: 3px solid var(--incorrect);
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+  }
+  .incorrect-item strong { color: var(--incorrect); font-size: 11px; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; display: block; margin-bottom: 4px; }
+
+  /* SCORE PANEL */
+  .score-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 28px;
+    display: none;
+  }
+  .score-panel.visible { display: block; animation: fadeSlide 0.4s ease; }
+  .score-panel h2 { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .score-stat {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .score-stat .val {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent);
+  }
+  .score-stat .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="badge">AWS Certified Data Engineer Associate</div>
+    <h1>Domain 3 – <span>Data Operations</span> &amp; Support</h1>
+    <div class="meta-row">
+      <div class="meta-item"><strong>Candidato:</strong> Marco Antonio Camargo Funez</div>
+      <div class="meta-item"><strong>Email:</strong> marco.camargo.funez@gmail.com</div>
+      <div class="meta-item"><strong>Preguntas:</strong> 22</div>
+    </div>
+  </div>
+</header>
+
+<div class="progress-bar-wrap">
+  <div class="progress-label">
+    <span id="progress-text">0 / 22 respondidas</span>
+    <span id="progress-pct">0%</span>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+</div>
+
+<div class="controls">
+  <button class="btn active" id="btn-all" onclick="filterCards('all')">Todas</button>
+  <button class="btn" id="btn-wrong" onclick="filterCards('wrong')">Incorrectas</button>
+  <button class="btn" id="btn-correct" onclick="filterCards('correct')">Correctas</button>
+  <button class="btn" id="btn-unanswered" onclick="filterCards('unanswered')">Sin responder</button>
+  <button class="btn" onclick="showScore()">Ver Puntaje</button>
+  <button class="btn" onclick="resetAll()">Reiniciar</button>
+</div>
+
+<main>
+  <div class="score-panel" id="score-panel">
+    <h2>📊 Resultado del Examen</h2>
+    <div class="score-grid">
+      <div class="score-stat"><div class="val" id="sc-total">—</div><div class="lbl">Respondidas</div></div>
+      <div class="score-stat"><div class="val" id="sc-correct" style="color:var(--correct)">—</div><div class="lbl">Correctas</div></div>
+      <div class="score-stat"><div class="val" id="sc-wrong" style="color:var(--incorrect)">—</div><div class="lbl">Incorrectas</div></div>
+      <div class="score-stat"><div class="val" id="sc-pct">—</div><div class="lbl">Porcentaje</div></div>
+    </div>
+  </div>
+
+  <div id="questions-container"></div>
+</main>
+
+<script>
+const questions = [
+  {
+    id: 1,
+    scenario: "Amazon Redshift · Data API",
+    text: "A stock market analysis firm uses Amazon Redshift to store extensive historical stock market data. A data engineer is tasked with enabling an analytics dashboard application to perform real-time, interactive queries on this data. Which approach should the data engineer take to integrate query capabilities into the application with minimal operational complexity?",
+    multi: false,
+    options: [
+      "Implement Amazon QuickSight with SPICE for direct querying of Redshift data.",
+      "Use the Amazon Redshift Data API to execute queries from the application.",
+      "Configure ODBC connections for the application to query Amazon Redshift.",
+      "Leverage Amazon Athena with Redshift federated query to run real-time queries from the application."
+    ],
+    correct: [1],
+    explanation: "The Amazon Redshift Data API simplifies running queries on a Redshift cluster by allowing applications to execute SQL commands asynchronously without managing database connections. It handles scaling and connection management automatically, making it ideal for web-based applications.",
+    incorrect: [
+      { opt: "QuickSight with SPICE", why: "QuickSight es una herramienta de BI para usuarios finales, no para integrar capacidades de consulta en aplicaciones personalizadas." },
+      { opt: "ODBC", why: "Las conexiones ODBC son operacionalmente complejas: requieren connection pooling, escalado y alta disponibilidad." },
+      { opt: "Athena + Redshift federated query", why: "Más adecuado para consultas ad-hoc entre múltiples fuentes, no optimizado para consultas en tiempo real desde una web app." }
+    ]
+  },
+  {
+    id: 2,
+    scenario: "SQL · Amazon RDS PostgreSQL",
+    text: "An e-commerce company uses Amazon RDS for PostgreSQL to manage product inventory. The table 'products' has columns: id, name, price, quantity_in_stock. Which SQL query retrieves products with price > $50 AND quantity_in_stock < 100?",
+    multi: false,
+    options: [
+      "SELECT * FROM products WHERE price > $50 AND quantity_in_stock < 100;",
+      "FIND * IN products WHERE price IS GREATER THAN 50 AND quantity_in_stock IS LESS THAN 100;",
+      "GET * FROM products WHEN price > 50 & quantity_in_stock < 100;",
+      "SELECT * FROM products WHERE price > 50 AND quantity_in_stock < 100;"
+    ],
+    correct: [3],
+    explanation: "La sintaxis SQL estándar requiere SELECT, la cláusula WHERE con operadores > y <, y valores numéricos sin símbolo de moneda.",
+    incorrect: [
+      { opt: "price > $50", why: "Los valores numéricos en SQL no llevan prefijo de moneda." },
+      { opt: "FIND / IS GREATER THAN", why: "No son palabras clave válidas en SQL; el comando correcto es SELECT con > y <." },
+      { opt: "GET / WHEN / &", why: "Sintaxis inválida: se usa SELECT, WHERE y AND, no GET, WHEN ni &." }
+    ]
+  },
+  {
+    id: 3,
+    scenario: "Amazon Aurora MySQL · JDBC",
+    text: "A software development team is building a Java-based application that needs to connect to Amazon Aurora MySQL. Which database connection protocol should the team use?",
+    multi: false,
+    options: [
+      "Use the Open Database Connectivity (ODBC).",
+      "Use the Java Database Connectivity (JDBC).",
+      "Use the Simple Object Access Protocol (SOAP).",
+      "Use the Advanced Message Queuing Protocol (AMQP)."
+    ],
+    correct: [1],
+    explanation: "JDBC es la API estándar de conectividad de bases de datos específicamente diseñada para aplicaciones Java, ofreciendo compatibilidad y rendimiento óptimo con Aurora MySQL.",
+    incorrect: [
+      { opt: "ODBC", why: "Es de propósito general, más usado con C/C++. No está optimizado para Java." },
+      { opt: "SOAP", why: "Es un protocolo de servicios web, no de conectividad a bases de datos." },
+      { opt: "AMQP", why: "Es un protocolo de mensajería asíncrona, no sirve para conectarse a una base de datos." }
+    ]
+  },
+  {
+    id: 4,
+    scenario: "SQL LIKE · Amazon Redshift",
+    text: "A marketing firm needs to select all campaigns from a 'Campaigns' table whose 'CampaignName' ends with 'Spring' or 'Summer'. Which SQL query is correct?",
+    multi: false,
+    options: [
+      "SELECT * FROM Campaigns WHERE CampaignName ENDS WITH 'Spring' OR CampaignName ENDS WITH 'Summer';",
+      "SELECT * FROM Campaigns WHERE CampaignName = '%Spring' OR CampaignName = '%Summer';",
+      "SELECT * FROM Campaigns WHERE RIGHT(CampaignName, 6) = 'Spring' OR RIGHT(CampaignName, 6) = 'Summer';",
+      "SELECT * FROM Campaigns WHERE CampaignName LIKE '%Spring' OR CampaignName LIKE '%Summer';"
+    ],
+    correct: [3],
+    explanation: "El operador LIKE con % al inicio actúa como comodín para cualquier cantidad de caracteres precedentes. '%Spring' coincide con cualquier nombre que termine en 'Spring'.",
+    incorrect: [
+      { opt: "ENDS WITH", why: "No es un operador SQL válido." },
+      { opt: "= '%Spring'", why: "El operador = busca coincidencia exacta; no interpreta % como comodín." },
+      { opt: "RIGHT(CampaignName, 6)", why: "'Spring' y 'Summer' tienen distinta longitud (6 vs 6 sí coincide, pero es más complejo e innecesario comparado con LIKE)." }
+    ]
+  },
+  {
+    id: 5,
+    scenario: "SQL LIKE · Amazon Redshift",
+    text: "A business needs to retrieve records from 'CustomerDetails' where 'FirstName' begins with 'Jo' or 'Ja'. Which query should they use?",
+    multi: false,
+    options: [
+      "SELECT * FROM CustomerDetails WHERE FirstName LIKE 'Jo%' OR FirstName LIKE 'Ja%';",
+      "SELECT * FROM CustomerDetails WHERE FirstName STARTS WITH 'Jo' OR FirstName STARTS WITH 'Ja';",
+      "SELECT * FROM CustomerDetails WHERE FirstName = 'Jo*' OR FirstName = 'Ja*';",
+      "SELECT * FROM CustomerDetails WHERE FirstName IN ('Jo%', 'Ja%');"
+    ],
+    correct: [0],
+    explanation: "LIKE con % al final hace coincidir cualquier secuencia de caracteres después de 'Jo' o 'Ja', recuperando todos los nombres que empiezan con esos prefijos.",
+    incorrect: [
+      { opt: "STARTS WITH", why: "No existe este operador en SQL estándar." },
+      { opt: "= 'Jo*'", why: "El operador = no interpreta * como comodín." },
+      { opt: "IN ('Jo%', 'Ja%')", why: "IN busca valores exactos, no patrones con comodines." }
+    ]
+  },
+  {
+    id: 6,
+    scenario: "AWS Lambda · Lambda Layers",
+    text: "A data engineer maintains custom Python scripts used by many AWS Lambda functions. When scripts are modified, all Lambda functions must be manually updated. Which solution minimizes manual effort?",
+    multi: false,
+    options: [
+      "Store a pointer to the custom Python scripts in the execution context object in a shared S3 bucket.",
+      "Package the custom Python scripts into Lambda layers. Apply the Lambda layers to the Lambda functions.",
+      "Store a pointer to the custom Python scripts in environment variables in a shared S3 bucket.",
+      "Assign the same alias to each Lambda function and call each by its alias."
+    ],
+    correct: [1],
+    explanation: "Lambda Layers están diseñados específicamente para compartir código entre múltiples funciones Lambda. Cuando se actualiza una layer, todas las funciones asociadas acceden automáticamente a la última versión.",
+    incorrect: [
+      { opt: "Execution context / S3 pointer", why: "Requiere descargar scripts en runtime, agrega latencia y no propaga actualizaciones automáticamente." },
+      { opt: "Environment variables / S3", why: "También requiere descarga en runtime y no automatiza actualizaciones." },
+      { opt: "Alias compartido", why: "Los alias gestionan versiones de funciones, no comparten código entre ellas." }
+    ]
+  },
+  {
+    id: 7,
+    scenario: "Amazon S3 · Storage Classes",
+    text: "A media company stores high-resolution images in S3. Images are frequently accessed the first month then rarely. Immediate access is required on demand. Which is the MOST cost-effective storage option?",
+    multi: false,
+    options: [
+      "Store the images in S3 Standard-IA after the first month.",
+      "Move the images to S3 Glacier immediately after the first month.",
+      "Keep the images in S3 Standard for high availability access.",
+      "Use S3 Outposts for on-premises access."
+    ],
+    correct: [0],
+    explanation: "S3 Standard-IA está diseñado para datos de acceso infrecuente que requieren acceso rápido cuando se necesitan. Ofrece menor costo de almacenamiento manteniendo la misma baja latencia que S3 Standard.",
+    incorrect: [
+      { opt: "S3 Glacier", why: "Los tiempos de recuperación son de minutos a horas; no cumple el requisito de acceso inmediato." },
+      { opt: "S3 Standard", why: "Ofrece acceso rápido pero no es rentable para datos raramente accedidos." },
+      { opt: "S3 Outposts", why: "Es para infraestructura on-premises, no es una clase de almacenamiento ni ofrece ventaja de costo para este caso." }
+    ]
+  },
+  {
+    id: 8,
+    scenario: "Serverless · API Gateway · Lambda",
+    text: "A startup has a Vue.js frontend interacting via API Gateway. They need to run a Python script for data processing infrequently, minimizing management overhead. Which approach is most efficient?",
+    multi: false,
+    options: [
+      "Host the Python script on Amazon EC2 and set up API Gateway to trigger it.",
+      "Create an AWS Lambda function using Python, triggered by API Gateway.",
+      "Use AWS Fargate with a containerized Python script configured with API Gateway.",
+      "Implement the Python script as an AWS Glue job triggered by API Gateway."
+    ],
+    correct: [1],
+    explanation: "Lambda + API Gateway es la solución serverless ideal: escala automáticamente, cobra solo por ejecución, no requiere gestión de infraestructura y responde en tiempo real.",
+    incorrect: [
+      { opt: "EC2", why: "Requiere gestionar el servidor, parches de seguridad y escalado: mayor sobrecarga operacional." },
+      { opt: "Fargate", why: "Más adecuado para ejecuciones continuas o orquestación compleja, no para scripts infrecuentes." },
+      { opt: "AWS Glue", why: "Es un servicio ETL administrado; excesivo para ejecución simple de scripts y no responde tan eficientemente vía API Gateway." }
+    ]
+  },
+  {
+    id: 9,
+    scenario: "Amazon Athena · Performance",
+    text: "A data engineer wants to improve Athena query performance. Queries primarily filter on one column; data is in uncompressed CSV. Which action is MOST effective?",
+    multi: false,
+    options: [
+      "Transition the data to Apache Parquet format and employ Snappy compression.",
+      "Convert CSV to XML format and use GZIP compression.",
+      "Partition the CSV files by the most commonly queried column.",
+      "Enable Amazon S3 Select on the CSV files."
+    ],
+    correct: [0],
+    explanation: "Apache Parquet es un formato columnar optimizado para consultas analíticas. Reduce drásticamente los datos escaneados en filtros por columna. Snappy es una compresión rápida y eficiente que complementa Parquet sin overhead significativo.",
+    incorrect: [
+      { opt: "XML + GZIP", why: "XML es también orientado a filas; no ofrece las ventajas de rendimiento de un formato columnar." },
+      { opt: "Particionado de CSV", why: "El particionado mejora el rendimiento pero no ofrece las ventajas de los formatos columnares al filtrar columnas específicas." },
+      { opt: "S3 Select", why: "Reduce datos escaneados por consulta, pero no tanto como convertir a formato columnar." }
+    ]
+  },
+  {
+    id: 10,
+    scenario: "Athena · Step Functions · Glue",
+    text: "A data analyst needs to run a sequence of Athena queries (each >15 min) on a daily schedule, ensuring each query starts only after the previous completes. Select the TWO most cost-effective approaches.",
+    multi: true,
+    options: [
+      "Schedule with EventBridge to trigger Lambda functions that call start_query_execution.",
+      "Use AWS Step Functions with a Lambda function and polling mechanism to check query completion.",
+      "Configure AWS Batch jobs with job dependencies.",
+      "Implement a serverless AWS Glue Python shell job with a polling mechanism using get_query_execution.",
+      "Use Amazon MWAA (Apache Airflow) to orchestrate the Athena queries."
+    ],
+    correct: [1, 3],
+    explanation: "Step Functions coordina servicios en workflows serverless con manejo de errores integrado, pagando por transición. Glue Python shell jobs son serverless, se facturan por segundo y permiten implementar mecanismos de espera/polling para queries de larga duración.",
+    incorrect: [
+      { opt: "EventBridge + Lambda", why: "Lambda tiene un tiempo máximo de ejecución de 15 minutos; puede agotar el tiempo antes de que la query de Athena termine." },
+      { opt: "AWS Batch", why: "Diseñado para cargas de cómputo batch, no para orquestar queries de Athena. Más complejo y costoso." },
+      { opt: "Amazon MWAA", why: "Introduce complejidad y costos innecesarios para orquestar solo queries de Athena, comparado con Step Functions o Glue." }
+    ]
+  },
+  {
+    id: 11,
+    scenario: "Amazon S3 · Object Lambda",
+    text: "A company stores large image files in S3 and needs to resize them dynamically on-the-fly when accessed, without storing multiple versions. Which AWS service achieves this?",
+    multi: false,
+    options: [
+      "AWS Lambda@Edge",
+      "Amazon Elastic Transcoder",
+      "Amazon S3 Object Lambda",
+      "AWS Step Functions"
+    ],
+    correct: [2],
+    explanation: "S3 Object Lambda permite agregar código personalizado para procesar datos recuperados de S3 antes de devolverlos. Invoca una Lambda para transformar (redimensionar) la imagen en tiempo real durante la recuperación, sin almacenar múltiples versiones.",
+    incorrect: [
+      { opt: "Lambda@Edge", why: "Ejecuta funciones en Edge locations para CloudFront, no está diseñado específicamente para transformar objetos S3 durante la recuperación." },
+      { opt: "Elastic Transcoder", why: "Sirve para transcodificación de medios en lote, no para transformaciones dinámicas en tiempo real." },
+      { opt: "Step Functions", why: "Orquesta workflows entre servicios AWS, no está pensado para modificar datos S3 durante la recuperación." }
+    ]
+  },
+  {
+    id: 12,
+    scenario: "AWS Glue · Particionado S3",
+    text: "A company uses S3 for a data lake with partitions in format s3://bucket/prefix/year=2023/month=01/day=01. A data engineer must ensure the Glue Data Catalog synchronizes with minimum latency when new partitions are added. Which solution meets this?",
+    multi: false,
+    options: [
+      "Run MSCK REPAIR TABLE from the AWS Glue console.",
+      "Schedule an AWS Glue crawler to run every morning.",
+      "Manually run the AWS Glue CreatePartition API twice each day.",
+      "Use code that writes data to S3 to invoke the Boto3 AWS Glue create_partition API call."
+    ],
+    correct: [3],
+    explanation: "Invocar create_partition directamente desde el código que escribe en S3 actualiza el Data Catalog en tiempo real, sin necesidad de procesos manuales o programados.",
+    incorrect: [
+      { opt: "MSCK REPAIR TABLE", why: "Es un proceso manual que introduce latencia y es computacionalmente caro porque escanea todo el bucket S3." },
+      { opt: "Glue crawler programado", why: "Los crawlers se ejecutan en horario fijo y no ofrecen actualización inmediata." },
+      { opt: "CreatePartition API manual", why: "Seguiría requiriendo intervención manual; no escala bien." }
+    ]
+  },
+  {
+    id: 13,
+    scenario: "Amazon Athena · Apache Spark",
+    text: "An organization uses Athena for SQL queries and now wants Apache Spark to access Athena data. Which feature enables this?",
+    multi: false,
+    options: [
+      "Athena API",
+      "Athena JDBC driver",
+      "Athena SDK",
+      "Athena UDFs"
+    ],
+    correct: [1],
+    explanation: "El driver JDBC de Athena permite que aplicaciones Spark se conecten a Athena como fuente de datos y ejecuten queries SQL directamente, combinando el poder de Spark con el servicio de consultas de Athena.",
+    incorrect: [
+      { opt: "Athena API", why: "Es para acceso programático general, no específicamente para integración con Spark." },
+      { opt: "Athena SDK", why: "Para crear aplicaciones personalizadas; no proporciona acceso directo a Athena desde Spark." },
+      { opt: "Athena UDFs", why: "Extienden las capacidades SQL de Athena; no son un mecanismo para que Spark acceda a los datos." }
+    ]
+  },
+  {
+    id: 14,
+    scenario: "Amazon S3 · Cross-Region Replication",
+    text: "A healthcare company stores sensitive patient records as JSON in S3 (US East N. Virginia). They need automatic backup to another AWS region for disaster recovery with minimal manual intervention. Which solution should they implement?",
+    multi: false,
+    options: [
+      "Enable cross-region replication on the S3 bucket to replicate data to another S3 bucket in a different region.",
+      "Use AWS Data Pipeline to create a daily job that copies S3 data to another region.",
+      "Implement an AWS Lambda function triggered by S3 events to copy files to another region.",
+      "Configure Amazon S3 Lifecycle policies to transfer data to another region after a specific period."
+    ],
+    correct: [0],
+    explanation: "S3 Cross-Region Replication (CRR) replica automáticamente todos los datos escritos en el bucket primario a un bucket secundario en otra región, de forma transparente y sin intervención manual.",
+    incorrect: [
+      { opt: "AWS Data Pipeline diario", why: "Requiere configurar y programar un pipeline; menos eficiente y no ofrece replicación en tiempo real." },
+      { opt: "Lambda + S3 events", why: "Introduce complejidad innecesaria comparado con la solución nativa CRR de S3." },
+      { opt: "S3 Lifecycle policies", why: "Gestionan ciclo de vida y clases de almacenamiento; no soportan replicación entre regiones." }
+    ]
+  },
+  {
+    id: 15,
+    scenario: "Kinesis · Lambda · DynamoDB",
+    text: "A mobile app streams user activity to Kinesis Data Streams. The app needs to process this data in real-time and update user profiles in DynamoDB. Which combination should be used?",
+    multi: false,
+    options: [
+      "Deploy Amazon EC2 instances to consume and process the stream, then write to DynamoDB.",
+      "Use AWS Lambda to process data from Kinesis Data Streams and update records in DynamoDB.",
+      "Configure Amazon EMR to handle stream processing and update DynamoDB with batch jobs.",
+      "Use AWS Glue to extract and transform streaming data, then load into DynamoDB."
+    ],
+    correct: [1],
+    explanation: "Lambda puede ser disparado directamente por Kinesis Data Streams, procesando datos en tiempo real y actualizando DynamoDB. Es serverless, escala automáticamente con el volumen de datos y tiene overhead mínimo.",
+    incorrect: [
+      { opt: "EC2", why: "Requiere gestión de instancias, escalado y monitoreo: mayor sobrecarga operacional." },
+      { opt: "EMR", why: "Usado típicamente para procesamiento batch a gran escala, no óptimo para streaming en tiempo real." },
+      { opt: "AWS Glue", why: "Es principalmente para trabajos ETL batch, no para procesamiento en tiempo real de streams." }
+    ]
+  },
+  {
+    id: 16,
+    scenario: "S3 Event Notifications · AWS Batch",
+    text: "A logistics company stores shipment tracking updates as JSON files in S3. They need to process only new or updated records each hour in a cost-effective manner. Which service should the data engineer implement?",
+    multi: false,
+    options: [
+      "Implement Amazon S3 Event Notifications to invoke a processing job in AWS Batch for newly modified files.",
+      "Configure AWS Lambda with S3 triggers to parse and process changes hourly.",
+      "Use AWS Glue crawlers to detect schema changes and run ETL jobs for new/updated files.",
+      "Configure AWS DataSync to monitor and synchronize changed files to another S3 bucket."
+    ],
+    correct: [0],
+    explanation: "S3 Event Notifications se activan automáticamente ante nuevos archivos o modificaciones. Invocando AWS Batch, se gestiona eficientemente el scheduling, ejecución y recursos para procesar solo los archivos cambiados.",
+    incorrect: [
+      { opt: "Lambda con S3 triggers", why: "A escala, muchos archivos pequeños pueden generar costos altos y gestión compleja de funciones Lambda." },
+      { opt: "Glue crawlers", why: "Principalmente para detección de esquemas y catalogación, no para procesar cambios individuales de archivos eficientemente." },
+      { opt: "AWS DataSync", why: "Diseñado para sincronizar datasets entre servicios de almacenamiento, no para disparar flujos de procesamiento." }
+    ]
+  },
+  {
+    id: 17,
+    scenario: "S3 Event Notifications · Lambda",
+    text: "A media company needs to automatically trigger metadata extraction whenever a new video file is uploaded to S3. Which AWS feature should the team use?",
+    multi: false,
+    options: [
+      "Configure Amazon S3 Event Notifications to trigger an AWS Lambda function for metadata extraction.",
+      "Set up an AWS Lambda function to poll S3 for new files at regular intervals.",
+      "Utilize Amazon S3 Transfer Acceleration to detect uploads and trigger a Step Functions workflow.",
+      "Create an Amazon EventBridge rule to monitor S3 and invoke an AWS Batch job."
+    ],
+    correct: [0],
+    explanation: "S3 Event Notifications dispara automáticamente una Lambda en cuanto se sube un nuevo archivo. Elimina la necesidad de polling o intervención manual, ofreciendo una solución eficiente y con mínima sobrecarga operacional.",
+    incorrect: [
+      { opt: "Lambda polling S3", why: "El polling es menos eficiente e introduce delays; es más costoso en recursos." },
+      { opt: "S3 Transfer Acceleration", why: "Acelera transferencias de archivos a S3; no provee mecanismo para disparar workflows." },
+      { opt: "EventBridge + Batch", why: "EventBridge es para monitoreo amplio del sistema, no tan directo ni eficiente como S3 Event Notifications para disparar tareas individuales." }
+    ]
+  },
+  {
+    id: 18,
+    scenario: "Amazon Athena · CTAS",
+    text: "A data analytics team needs to generate a summarized table from a large S3 dataset of sales transactions for quick analysis. Which AWS service should they use to efficiently create this aggregated table?",
+    multi: false,
+    options: [
+      "Utilize Amazon Redshift Spectrum to query S3 data and create a summary table in Redshift.",
+      "Implement AWS Glue ETL job to transform and aggregate data, then store in S3.",
+      "Configure an Amazon EMR cluster to run a Hive script for data aggregation.",
+      "Use Amazon Athena to perform a 'CREATE TABLE AS SELECT' operation."
+    ],
+    correct: [3],
+    explanation: "La operación CTAS de Athena crea una nueva tabla a partir de los resultados de un SELECT sobre datos en S3. Es serverless, no requiere gestión de infraestructura y es conveniente para el equipo.",
+    incorrect: [
+      { opt: "Redshift Spectrum", why: "Requiere gestionar un clúster Redshift; más adecuado para cargas analíticas complejas y continuas." },
+      { opt: "AWS Glue ETL", why: "Configurar y gestionar trabajos ETL es más complejo y costoso para una simple agregación ad-hoc." },
+      { opt: "EMR + Hive", why: "Requiere aprovisionar y gestionar un clúster EMR; sobrecarga operacional innecesaria frente a Athena serverless." }
+    ]
+  },
+  {
+    id: 19,
+    scenario: "AWS DMS · Migración de Bases de Datos",
+    text: "A data engineering team needs to migrate terabytes of data from on-premises Oracle to Amazon Aurora, minimize downtime, and keep Aurora synchronized with the on-premises database during a transitional period. Which service should they use?",
+    multi: false,
+    options: [
+      "Use AWS Data Pipeline to transfer data and schedule incremental updates.",
+      "Use AWS Database Migration Service (DMS) to migrate and then use ongoing replication.",
+      "Use Amazon S3 Transfer Acceleration for initial migration and Lambda for ongoing changes.",
+      "Configure Amazon Kinesis Data Firehose for continuous data streaming from Oracle to Aurora."
+    ],
+    correct: [1],
+    explanation: "AWS DMS está diseñado para migraciones de bases de datos con mínimo downtime. Soporta Oracle y Aurora, facilita la migración inicial masiva y luego habilita replicación continua para mantener la sincronización.",
+    incorrect: [
+      { opt: "AWS Data Pipeline", why: "Más orientado a flujos de trabajo de procesamiento de datos, no a migraciones complejas con replicación en tiempo real." },
+      { opt: "S3 Transfer Acceleration + Lambda", why: "No son herramientas de migración de bases de datos; requerirían desarrollo personalizado complejo." },
+      { opt: "Kinesis Data Firehose", why: "Orientado a streaming en tiempo real hacia servicios AWS; no está diseñado para migraciones de bases de datos con consistencia garantizada." }
+    ]
+  },
+  {
+    id: 20,
+    scenario: "Amazon Athena · Particionado · Costos",
+    text: "A large retail organization uses Athena for ad-hoc querying of a multi-petabyte e-commerce dataset in S3, updated nightly by Glue. The data must refresh in BI tools every 2 hours. Which approach minimizes Athena querying costs without adding infrastructure complexity?",
+    multi: false,
+    options: [
+      "Use Athena's data partitioning to improve query efficiency and reduce data scanned.",
+      "Implement Amazon S3 Intelligent-Tiering to move less accessed data to cheaper storage.",
+      "Set up Amazon Athena Workgroups to enforce cost controls.",
+      "Convert the dataset to Apache ORC columnar format."
+    ],
+    correct: [0],
+    explanation: "El particionado de Athena reduce la cantidad de datos escaneados por consulta organizando los datos según filtros comunes (fecha, categoría, etc.), mejorando el rendimiento y reduciendo costos sin cambios de infraestructura.",
+    incorrect: [
+      { opt: "S3 Intelligent-Tiering", why: "Reduce costos de almacenamiento, no el costo de consulta en Athena (determinado por datos escaneados)." },
+      { opt: "Athena Workgroups", why: "Controla acceso y límites de consulta, pero no reduce inherentemente el costo de escanear datasets grandes." },
+      { opt: "Convertir a ORC", why: "ORC/Parquet mejoran el rendimiento, pero la conversión implica sobrecarga operacional; el particionado es más sencillo de implementar." }
+    ]
+  },
+  {
+    id: 21,
+    scenario: "Amazon Athena · Rendimiento de Queries",
+    text: "An analytics team using Athena with Glue Data Catalog has identified slowdowns in query planning due to excessive S3 partitions. Select TWO measures to enhance query performance.",
+    multi: true,
+    options: [
+      "Implement AWS Glue Elastic Views to automate partition management.",
+      "Transform the data in S3 to Apache Parquet format.",
+      "Employ Athena's partition projection for dynamic partitioning based on common query patterns.",
+      "Use Athena DML statements to reorganize data into fewer, more meaningful partitions.",
+      "Merge small S3 objects into larger ones using AWS Glue data transformation jobs."
+    ],
+    correct: [1, 2],
+    explanation: "Parquet reduce los bytes que Athena necesita leer. La proyección de particiones gestiona muchas particiones proyectándolas dinámicamente sin leer el metadata real del Glue Data Catalog, acelerando la planificación de queries.",
+    incorrect: [
+      { opt: "Glue Elastic Views", why: "Combina y replica datos entre stores; no está directamente relacionado con el rendimiento de Athena ni gestión de particiones." },
+      { opt: "DML para reorganizar particiones", why: "Athena no reorganiza inherentemente datos en menos particiones con DML." },
+      { opt: "Merge de objetos S3 con Glue", why: "Combinar archivos sin abordar la estrategia de particionado puede no resolver el cuello de botella en la planificación." }
+    ]
+  },
+  {
+    id: 22,
+    scenario: "Amazon EBS · Modificación de Volúmenes",
+    text: "A company wants to upgrade from Amazon EBS io1 to io2 volumes without disrupting running EC2 instances or risking data loss, with minimal operational effort. What approach should the data engineer take?",
+    multi: false,
+    options: [
+      "Use Amazon EBS direct APIs to copy data from io1 to newly provisioned io2, then swap.",
+      "Provision new io2 volumes and incrementally copy data using an EC2-based file copy tool.",
+      "Implement AWS Storage Gateway to facilitate data transfer from io1 to io2.",
+      "Modify the volume type of existing io1 volumes to io2 via AWS Management Console or CLI without detaching."
+    ],
+    correct: [3],
+    explanation: "Amazon EBS permite cambiar el tipo de volumen en vivo usando la consola o CLI sin necesidad de desconectarlo de la instancia EC2, sin tiempo de inactividad y con mínima sobrecarga operacional.",
+    incorrect: [
+      { opt: "EBS direct APIs", why: "Requiere scripting y manejo de APIs, añadiendo complejidad operacional innecesaria." },
+      { opt: "Aprovisionamiento + copia manual", why: "Proceso lento, tedioso y con riesgo de errores durante la copia y el swap." },
+      { opt: "AWS Storage Gateway", why: "Diseñado para almacenamiento híbrido cloud-on-premises; innecesario y añade complejidad para una transferencia entre volúmenes EBS." }
+    ]
+  }
+];
+
+// STATE
+const state = {
+  answers: {}, // qId -> [optIndex]
+  submitted: {}, // qId -> bool
+  filter: 'all'
+};
+
+function getStatus(q) {
+  if (!state.submitted[q.id]) return 'unanswered';
+  const selected = state.answers[q.id] || [];
+  const correct = q.correct.slice().sort().join(',');
+  const sel = selected.slice().sort().join(',');
+  return sel === correct ? 'correct' : 'wrong';
+}
+
+function updateProgress() {
+  const answered = Object.keys(state.submitted).length;
+  const pct = Math.round(answered / questions.length * 100);
+  document.getElementById('progress-text').textContent = `${answered} / ${questions.length} respondidas`;
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function renderAll() {
+  const container = document.getElementById('questions-container');
+  container.innerHTML = '';
+  questions.forEach((q, idx) => {
+    const card = buildCard(q, idx);
+    container.appendChild(card);
+  });
+  applyFilter(state.filter);
+  updateProgress();
+}
+
+function buildCard(q, idx) {
+  const card = document.createElement('div');
+  card.className = 'q-card';
+  card.id = 'card-' + q.id;
+
+  const status = getStatus(q);
+  if (status === 'correct') card.classList.add('answered-correct');
+  if (status === 'wrong') card.classList.add('answered-wrong');
+
+  // HEADER
+  const header = document.createElement('div');
+  header.className = 'q-header';
+  header.onclick = () => toggleCard(q.id);
+  header.innerHTML = `
+    <div class="q-num">${String(idx+1).padStart(2,'0')}</div>
+    <div class="q-text">${q.text}</div>
+    <svg class="q-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  `;
+  card.appendChild(header);
+
+  // BODY
+  const body = document.createElement('div');
+  body.className = 'q-body';
+  body.id = 'body-' + q.id;
+
+  let bodyHTML = `<div class="scenario-tag">${q.scenario}</div>`;
+  if (q.multi) bodyHTML += `<div class="multi-note">★ Selección múltiple – elige ${q.correct.length} opciones</div>`;
+  bodyHTML += `<div class="options" id="opts-${q.id}">`;
+
+  const letters = ['A','B','C','D','E'];
+  q.options.forEach((opt, i) => {
+    const selected = (state.answers[q.id] || []).includes(i);
+    let cls = '';
+    if (state.submitted[q.id]) {
+      if (q.correct.includes(i)) cls = 'correct-ans';
+      else if (selected) cls = 'wrong-ans';
+    } else if (selected) cls = 'selected';
+    bodyHTML += `
+      <div class="option ${cls}" id="opt-${q.id}-${i}" onclick="toggleOption(${q.id},${i})">
+        <div class="opt-marker">${letters[i]}</div>
+        <div>${opt}</div>
+      </div>`;
+  });
+  bodyHTML += `</div>`;
+  bodyHTML += `<button class="check-btn" id="btn-${q.id}" onclick="submitAnswer(${q.id})" ${state.submitted[q.id]?'disabled':''}>
+    ${state.submitted[q.id] ? '✓ Respondida' : 'Verificar respuesta'}
+  </button>`;
+
+  if (state.submitted[q.id]) {
+    bodyHTML += buildFeedback(q);
+  }
+
+  body.innerHTML = bodyHTML;
+  card.appendChild(body);
+  return card;
+}
+
+function buildFeedback(q) {
+  const status = getStatus(q);
+  const isCorrect = status === 'correct';
+  let html = `<div class="feedback">
+    <div class="fb-result ${isCorrect ? 'correct' : 'wrong'}">
+      ${isCorrect ? '✓ ¡Correcto!' : '✗ Incorrecto'}
+    </div>
+    <div class="fb-explanation">
+      <div class="expl-title">Explicación</div>
+      <p>${q.explanation}</p>`;
+  if (q.incorrect && q.incorrect.length) {
+    q.incorrect.forEach(inc => {
+      html += `<div class="incorrect-item"><strong>✗ Incorrecto: ${inc.opt}</strong>${inc.why}</div>`;
+    });
+  }
+  html += `</div></div>`;
+  return html;
+}
+
+function toggleCard(id) {
+  const card = document.getElementById('card-' + id);
+  card.classList.toggle('open');
+}
+
+function toggleOption(qId, optIdx) {
+  if (state.submitted[qId]) return;
+  const q = questions.find(q => q.id === qId);
+  if (!state.answers[qId]) state.answers[qId] = [];
+
+  if (q.multi) {
+    const idx = state.answers[qId].indexOf(optIdx);
+    if (idx === -1) state.answers[qId].push(optIdx);
+    else state.answers[qId].splice(idx, 1);
+  } else {
+    state.answers[qId] = [optIdx];
+  }
+  refreshOptions(qId);
+}
+
+function refreshOptions(qId) {
+  const q = questions.find(q => q.id === qId);
+  q.options.forEach((_, i) => {
+    const el = document.getElementById(`opt-${qId}-${i}`);
+    if (!el) return;
+    el.className = 'option';
+    if ((state.answers[qId] || []).includes(i)) el.classList.add('selected');
+  });
+}
+
+function submitAnswer(qId) {
+  const q = questions.find(q => q.id === qId);
+  if (!state.answers[qId] || state.answers[qId].length === 0) return;
+  if (q.multi && state.answers[qId].length !== q.correct.length) {
+    alert(`Por favor selecciona exactamente ${q.correct.length} opciones.`);
+    return;
+  }
+  state.submitted[qId] = true;
+
+  const card = document.getElementById('card-' + qId);
+  const status = getStatus(q);
+  card.classList.remove('answered-correct','answered-wrong');
+  if (status === 'correct') card.classList.add('answered-correct');
+  else card.classList.add('answered-wrong');
+
+  // Re-render body
+  const body = document.getElementById('body-' + qId);
+  const letters = ['A','B','C','D','E'];
+  q.options.forEach((_, i) => {
+    const el = document.getElementById(`opt-${qId}-${i}`);
+    if (!el) return;
+    el.className = 'option';
+    if (q.correct.includes(i)) el.classList.add('correct-ans');
+    else if ((state.answers[qId] || []).includes(i)) el.classList.add('wrong-ans');
+    el.onclick = null;
+  });
+
+  const btn = document.getElementById('btn-' + qId);
+  btn.disabled = true;
+  btn.textContent = '✓ Respondida';
+
+  const existing = body.querySelector('.feedback');
+  if (!existing) {
+    body.insertAdjacentHTML('beforeend', buildFeedback(q));
+  }
+
+  updateProgress();
+  applyFilter(state.filter);
+}
+
+function filterCards(type) {
+  state.filter = type;
+  ['all','wrong','correct','unanswered'].forEach(t => {
+    document.getElementById('btn-'+t).classList.toggle('active', t === type);
+  });
+  applyFilter(type);
+}
+
+function applyFilter(type) {
+  questions.forEach(q => {
+    const card = document.getElementById('card-' + q.id);
+    if (!card) return;
+    const status = getStatus(q);
+    if (type === 'all') card.style.display = '';
+    else if (type === 'wrong') card.style.display = status === 'wrong' ? '' : 'none';
+    else if (type === 'correct') card.style.display = status === 'correct' ? '' : 'none';
+    else if (type === 'unanswered') card.style.display = status === 'unanswered' ? '' : 'none';
+  });
+}
+
+function showScore() {
+  const panel = document.getElementById('score-panel');
+  panel.classList.add('visible');
+  const answered = Object.keys(state.submitted).length;
+  const correct = questions.filter(q => getStatus(q) === 'correct').length;
+  const wrong = questions.filter(q => getStatus(q) === 'wrong').length;
+  const pct = answered ? Math.round(correct / answered * 100) : 0;
+  document.getElementById('sc-total').textContent = answered;
+  document.getElementById('sc-correct').textContent = correct;
+  document.getElementById('sc-wrong').textContent = wrong;
+  document.getElementById('sc-pct').textContent = pct + '%';
+  panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetAll() {
+  if (!confirm('¿Reiniciar todas las respuestas?')) return;
+  Object.keys(state.answers).forEach(k => delete state.answers[k]);
+  Object.keys(state.submitted).forEach(k => delete state.submitted[k]);
+  document.getElementById('score-panel').classList.remove('visible');
+  renderAll();
+}
+
+// INIT
+renderAll();
+// Stagger card animations
+document.querySelectorAll('.q-card').forEach((c, i) => {
+  c.style.animationDelay = (i * 0.04) + 's';
+});
+</script>
+</body>
+</html>

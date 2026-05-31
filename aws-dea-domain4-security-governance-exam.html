@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS DEA Domain 4 — Data Security and Governance</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --card: #161d2e;
+    --border: #1e2d47;
+    --accent: #ff6b2b;
+    --accent2: #3b82f6;
+    --correct: #10b981;
+    --incorrect: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Space Grotesk', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59,130,246,0.12) 0%, transparent 60%),
+      repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(30,45,71,0.3) 40px, rgba(30,45,71,0.3) 41px),
+      repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(30,45,71,0.3) 40px, rgba(30,45,71,0.3) 41px);
+  }
+
+  header {
+    padding: 48px 0 32px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    background: rgba(22,29,46,0.7);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 4px 12px;
+    border-radius: 2px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(22px, 3vw, 34px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  h1 span { color: var(--accent2); }
+
+  .meta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
+  .progress-bar-wrap {
+    max-width: 600px;
+    margin: 16px auto 0;
+    background: var(--border);
+    height: 4px;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  .score-display {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  .score-display strong { color: var(--correct); }
+
+  main {
+    max-width: 860px;
+    margin: 40px auto;
+    padding: 0 20px 80px;
+  }
+
+  .question-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 32px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.4s ease both;
+    transition: border-color 0.3s;
+  }
+
+  .question-card.answered { border-color: rgba(59,130,246,0.3); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .q-header {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+
+  .q-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(255,107,43,0.1);
+    border: 1px solid rgba(255,107,43,0.3);
+    padding: 4px 10px;
+    border-radius: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+
+  .q-text {
+    font-size: 15px;
+    line-height: 1.7;
+    font-weight: 400;
+  }
+
+  .multi-label {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+    padding: 2px 8px;
+    border-radius: 2px;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+
+  .options { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+    line-height: 1.6;
+    text-align: left;
+    color: var(--text);
+    width: 100%;
+  }
+
+  .option:hover:not(.revealed) {
+    border-color: rgba(59,130,246,0.4);
+    background: rgba(59,130,246,0.06);
+  }
+
+  .option.selected:not(.revealed) {
+    border-color: var(--accent2);
+    background: rgba(59,130,246,0.1);
+  }
+
+  .option.correct-answer {
+    border-color: var(--correct);
+    background: rgba(16,185,129,0.1);
+    color: #d1fae5;
+  }
+
+  .option.wrong-answer {
+    border-color: var(--incorrect);
+    background: rgba(239,68,68,0.08);
+    color: #fecaca;
+  }
+
+  .option.faded { opacity: 0.45; }
+
+  .opt-marker {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 1px;
+    transition: all 0.2s;
+  }
+
+  .option.selected:not(.revealed) .opt-marker,
+  .option.selected-multi:not(.revealed) .opt-marker {
+    border-color: var(--accent2);
+    background: var(--accent2);
+    color: white;
+  }
+
+  .option.correct-answer .opt-marker {
+    border-color: var(--correct);
+    background: var(--correct);
+    color: white;
+  }
+
+  .option.wrong-answer .opt-marker {
+    border-color: var(--incorrect);
+    background: var(--incorrect);
+    color: white;
+  }
+
+  .opt-marker::after { content: attr(data-letter); }
+  .option.correct-answer .opt-marker::after { content: '✓'; }
+  .option.wrong-answer .opt-marker::after { content: '✗'; }
+
+  .check-btn {
+    margin-top: 18px;
+    padding: 10px 28px;
+    background: var(--accent2);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: all 0.2s;
+  }
+
+  .check-btn:hover { background: #2563eb; transform: translateY(-1px); }
+  .check-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .feedback-box {
+    margin-top: 20px;
+    padding: 20px 22px;
+    background: rgba(255,255,255,0.025);
+    border-left: 3px solid var(--correct);
+    border-radius: 0 6px 6px 0;
+    display: none;
+    animation: fadeUp 0.3s ease;
+  }
+
+  .feedback-box.wrong { border-color: var(--incorrect); }
+  .feedback-box.show { display: block; }
+
+  .feedback-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    margin-bottom: 10px;
+  }
+
+  .feedback-box:not(.wrong) .feedback-title { color: var(--correct); }
+  .feedback-box.wrong .feedback-title { color: var(--incorrect); }
+
+  .feedback-text {
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: #94a3b8;
+  }
+
+  .result-banner {
+    display: none;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 48px;
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .result-banner.show { display: block; animation: fadeUp 0.5s ease; }
+
+  .result-score {
+    font-family: var(--mono);
+    font-size: 72px;
+    font-weight: 600;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .result-label { font-size: 14px; color: var(--muted); margin-top: 8px; }
+
+  .restart-btn {
+    margin-top: 28px;
+    padding: 12px 40px;
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+  }
+
+  .restart-btn:hover { background: var(--accent); color: white; }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 8px 0 16px;
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 28px 16px 20px; position: relative; }
+    .question-card { padding: 20px; }
+    .q-text { font-size: 14px; }
+    .option { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">AWS Certified Data Engineer — Associate</div>
+  <h1>Domain 4 — <span>Data Security & Governance</span></h1>
+  <p class="meta">Marco Antonio Camargo Funez &nbsp;·&nbsp; marco.camargo.funez@gmail.com</p>
+  <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <p class="score-display" id="scoreDisplay">Responde las preguntas para ver tu progreso</p>
+</header>
+
+<main id="examContainer"></main>
+
+<script>
+const questions = [
+  {
+    id: 1,
+    text: "A team managing AWS infrastructure needs to automate a monitoring solution for their cloud resources. They want to use AWS Step Functions to check the health of their EC2 instances periodically and trigger a remediation process if any instance is found to be unhealthy. The solution should also log the status and any actions taken in response to the health checks.\n\nWhat combination of AWS services should the team integrate with Step Functions to automate this monitoring and remediation process?",
+    multi: false,
+    options: [
+      "Combine Step Functions with Amazon CloudWatch for health checks, AWS Lambda for remediation tasks, and Amazon S3 for logging.",
+      "Use AWS Config for continuous monitoring, integrate with Step Functions for status evaluation, and Amazon RDS for logging.",
+      "Use Step Functions with AWS Health for monitoring, Amazon ECS for remediation, and Amazon DynamoDB for logging.",
+      "Combine Step Functions with Amazon Inspector for health assessments, use Amazon EC2 Auto Scaling for remediation, and AWS CloudTrail for logging."
+    ],
+    correct: [0],
+    explanation: "Amazon CloudWatch puede monitorear la salud y el rendimiento de recursos AWS como instancias EC2. AWS Step Functions orquesta el flujo de trabajo invocando funciones Lambda para ejecutar acciones de remediación si una instancia está en mal estado. Amazon S3 almacena los registros del estado y las acciones tomadas. Esta combinación ofrece una solución completa de monitoreo, remediación y registro dentro del ecosistema AWS."
+  },
+  {
+    id: 2,
+    text: "A healthcare company uses an Amazon S3 bucket to store patient records. They want to ensure that the records can only be accessed by users who are accessing them through the company's Virtual Private Cloud (VPC).\n\nWhat should the company do to enforce this access restriction?",
+    multi: false,
+    options: [
+      "Implement an IAM policy for all users that restricts access to the S3 bucket unless requests are made through the company's VPC.",
+      "Configure a Network Access Control List (NACL) to allow access to the S3 bucket only for traffic originating from the company's VPC.",
+      "Attach a Security Group to the S3 bucket that restricts access to the bucket to traffic originating from the company's VPC.",
+      "Use an S3 bucket policy with a condition to allow access exclusively to requests that originate from the company's VPC."
+    ],
+    correct: [3],
+    explanation: "La forma más efectiva es usar una bucket policy con la condición 'aws:SourceVpc'. Esta condición garantiza que solo las solicitudes provenientes del VPC especificado tengan acceso al bucket. Las NACLs operan a nivel de subred y no aplican a S3. Los Security Groups no pueden adjuntarse a buckets S3. Las IAM policies por usuario son engorrosas y propensas a errores."
+  },
+  {
+    id: 3,
+    text: "A company stores sensitive documents in an Amazon S3 bucket. They need to ensure that these documents can only be accessed by requests originating from a specific range of IP addresses within their corporate network. The company wants to enforce this policy at the bucket level.\n\nWhich approach should the company use to restrict access to the S3 bucket based on the originating IP address?",
+    multi: false,
+    options: [
+      "Implement IAM user policies to restrict access to the S3 bucket based on the IP address.",
+      "Use a Network Access Control List (NACL) to restrict access to the S3 bucket for the specific IP range.",
+      "Set up a Security Group attached to the S3 bucket to allow traffic only from the specified IP range.",
+      "Apply an S3 bucket policy that includes a condition to allow access only from the specified IP address range."
+    ],
+    correct: [3],
+    explanation: "La mejor forma es usar una bucket policy de Amazon S3 con una condición específica de rango IP. Esto aplica restricciones de acceso a nivel de bucket, controlando directamente el acceso a los datos. Las NACLs operan a nivel de subred de VPC y no aplican a S3. Los Security Groups no se pueden adjuntar a buckets S3. Las IAM user policies son más adecuadas para permisos de usuario individual, no para restricciones de red a nivel de bucket."
+  },
+  {
+    id: 4,
+    text: "A digital marketing agency wants to collect, analyze, and visualize web traffic data from their diverse portfolio of client websites for enhanced marketing insights. The solution needs to handle large volumes of data, offer powerful search capabilities, and provide an interactive dashboard for visualization and analysis.\n\nWhich combination of AWS services should the agency use to collect, search, analyze, and visualize the web traffic data?",
+    multi: false,
+    options: [
+      "Implement Amazon MSK for data streaming, Amazon Redshift for data analysis, and Amazon OpenSearch Service for visualization.",
+      "Use AWS Direct Connect for data ingestion, Amazon RDS for data storage and querying, and Amazon OpenSearch Service for visualization.",
+      "Use Amazon Kinesis Data Firehose for data collection, Amazon OpenSearch Service for search and analysis, and Amazon QuickSight for visualization.",
+      "Set up Amazon S3 for data storage, AWS Glue for data ETL, and Amazon OpenSearch Service for search, analysis, and visualization."
+    ],
+    correct: [2],
+    explanation: "Kinesis Data Firehose es ideal para streaming y recopilación de datos en tiempo real a gran escala. Amazon OpenSearch Service proporciona capacidades robustas de búsqueda y análisis, perfectas para procesar datos de tráfico web. Amazon QuickSight se integra para visualizar los datos analizados mediante dashboards interactivos cruciales para marketing insights. Las otras opciones carecen de componentes de streaming en tiempo real o integración nativa eficiente."
+  },
+  {
+    id: 5,
+    text: "A multinational corporation wants to aggregate, analyze, and visualize logs from various AWS services and on-premises resources for business intelligence. The solution must provide capabilities for log aggregation, analysis, and building interactive visualizations for reporting and decision-making purposes.\n\nWhich combination of AWS services should the corporation use to meet these requirements?",
+    multi: false,
+    options: [
+      "Use Amazon CloudWatch for log aggregation, Amazon Athena for analysis, and Amazon QuickSight for visualization.",
+      "Use AWS Glue for log aggregation, Amazon Redshift for analysis, and AWS Lambda for visualization.",
+      "Use AWS CloudTrail for log aggregation, Amazon EMR for analysis, and Amazon S3 for visualization.",
+      "Use Amazon Kinesis Data Firehose for log aggregation, Amazon RDS for analysis, and Amazon EC2 for visualization."
+    ],
+    correct: [0],
+    explanation: "Amazon CloudWatch agrega logs de múltiples servicios AWS y recursos on-premises. Amazon Athena analiza esos logs con SQL de forma serverless, sin necesidad de infraestructura. Amazon QuickSight crea visualizaciones interactivas e informes de BI integrandose directamente con Athena. AWS Glue es principalmente ETL, CloudTrail es auditoría de cuentas, y EC2/Lambda no son herramientas de visualización."
+  },
+  {
+    id: 6,
+    text: "A financial services company has deployed its application on Amazon EC2 instances within a VPC. For security and compliance reasons, the company needs to ensure that all traffic to their Amazon DynamoDB tables remains within the AWS network and does not traverse the public internet.\n\nWhich AWS service or feature should the company use to securely connect its EC2 instances to DynamoDB without using the public internet?",
+    multi: false,
+    options: [
+      "Establish a VPN connection between the VPC and DynamoDB.",
+      "Use AWS Direct Connect to link the VPC to DynamoDB.",
+      "Implement AWS PrivateLink to privately connect the VPC to DynamoDB.",
+      "Configure a NAT Gateway in the VPC for secure communication with DynamoDB."
+    ],
+    correct: [2],
+    explanation: "AWS PrivateLink es la solución más adecuada: proporciona conectividad privada entre VPCs, servicios AWS y aplicaciones on-premises, todo dentro de la red AWS. Con PrivateLink para DynamoDB, todo el tráfico entre las instancias EC2 y DynamoDB permanece en la red AWS. VPN es para conexiones a redes externas. Direct Connect es para conectividad desde on-premises. NAT Gateway enruta a través de internet, lo que no cumple el requisito."
+  },
+  {
+    id: 7,
+    text: "A healthcare company needs to upload sensitive patient records to an Amazon S3 bucket. Due to the confidential nature of the data, they want to ensure that the files are encrypted before leaving the company's internal network. The company also wants to manage the encryption keys themselves.\n\nWhich method should the healthcare company use to securely upload their sensitive data to Amazon S3?",
+    multi: false,
+    options: [
+      "Enable server-side encryption with Amazon S3-managed keys (SSE-S3) for the S3 bucket.",
+      "Use client-side encryption with a customer-managed key before uploading the data to S3.",
+      "Apply Amazon S3 server-side encryption with AWS KMS-managed keys (SSE-KMS).",
+      "Configure the S3 bucket to use AWS Shield for encrypting data."
+    ],
+    correct: [1],
+    explanation: "La encriptación del lado del cliente es la única solución que cifra los datos ANTES de que salgan de la red interna. Al gestionar sus propias claves, la empresa asegura que los registros de pacientes se cifren según sus estándares. SSE-S3 y SSE-KMS cifran del lado del servidor (en AWS, no antes de salir). AWS Shield es un servicio de protección DDoS, sin capacidades de cifrado."
+  },
+  {
+    id: 8,
+    text: "A web application hosted on an Amazon EC2 instance leverages Amazon DynamoDB along with DynamoDB Accelerator (DAX) for improved performance with caching. The company's network administrator must configure the security group for the EC2 instance to allow necessary traffic for optimal application functionality.\n\nWhich port/s should the network administrator open in the EC2 instance's security group to ensure proper communication with DynamoDB and DAX?",
+    multi: false,
+    options: [
+      "Open port 443 for secure HTTP traffic to DynamoDB and DAX.",
+      "Open port 80 for HTTP traffic, allowing communication with DynamoDB and DAX.",
+      "Open port 22 for SSH, required for secure operations with DynamoDB and DAX.",
+      "Open port 8111 for communication specifically with DAX, while maintaining default settings for DynamoDB access."
+    ],
+    correct: [3],
+    explanation: "DynamoDB Accelerator (DAX) opera en el puerto 8111. El administrador debe abrir este puerto en el security group de la instancia EC2. DynamoDB en sí no requiere un puerto específico en el security group ya que se accede a través de la red administrada de AWS. El puerto 443 es HTTPS general, el 80 es HTTP, y el 22 es SSH — ninguno aplica a la comunicación directa con DynamoDB/DAX desde la aplicación."
+  },
+  {
+    id: 9,
+    text: "A software company has developed a serverless application using AWS Lambda and Amazon DynamoDB. The Lambda function needs to access a specific DynamoDB table to read and write data. The company emphasizes security best practices, particularly the principle of least privilege.\n\nHow should the company configure the AWS Lambda function's IAM role to adhere to the principle of least privilege while enabling necessary access to the DynamoDB table?",
+    multi: false,
+    options: [
+      "Attach the AWS managed policy AmazonDynamoDBFullAccess to the Lambda function's IAM role.",
+      "Create an IAM policy that grants full access to AWS services and attach it to the Lambda function's IAM role.",
+      "Create a custom IAM policy with specific permissions to GetItem, PutItem, and UpdateItem on the DynamoDB table and attach it to the Lambda function's IAM role.",
+      "Use the AWS managed policy AWSLambdaFullAccess for the Lambda function's IAM role to ensure it has sufficient permissions."
+    ],
+    correct: [2],
+    explanation: "El principio de mínimo privilegio requiere otorgar SOLO los permisos necesarios. Una IAM policy personalizada con GetItem, PutItem y UpdateItem sobre la tabla específica de DynamoDB es exactamente lo que la función Lambda necesita. AmazonDynamoDBFullAccess otorga acceso a todas las tablas y operaciones — demasiado amplio. Acceso completo a todos los servicios es una violación grave de seguridad. AWSLambdaFullAccess no incluye permisos de DynamoDB relevantes."
+  },
+  {
+    id: 10,
+    text: "A financial institution stores sensitive customer data files, including personally identifiable information (PII), in Amazon S3 buckets. To enhance data security and compliance, the institution wants to automatically discover, classify, and protect the sensitive data in these S3 buckets.\n\nWhich AWS service should the financial institution use to automatically identify and safeguard sensitive customer data stored in Amazon S3?",
+    multi: false,
+    options: [
+      "Use Amazon Macie to automatically discover and classify sensitive data in Amazon S3.",
+      "Implement Amazon GuardDuty for continuous monitoring and threat detection on S3 data.",
+      "Configure AWS WAF to apply web filtering rules on access to the S3 buckets.",
+      "Deploy AWS Shield Advanced for protection against DDoS attacks targeting data in S3 buckets."
+    ],
+    correct: [0],
+    explanation: "Amazon Macie es un servicio de seguridad de datos que usa machine learning y coincidencia de patrones para descubrir y clasificar datos sensibles en Amazon S3, incluyendo PII. Macie puede evaluar, auditar y reportar los datos encontrados. GuardDuty detecta amenazas pero no clasifica datos. AWS WAF protege aplicaciones web de exploits. AWS Shield protege contra ataques DDoS — ninguno clasifica ni protege datos sensibles en S3."
+  },
+  {
+    id: 11,
+    text: "A financial analytics company stores highly sensitive client data for analysis in an Amazon S3 bucket. Due to the sensitive nature of the data, the company requires that all files must be encrypted at rest using keys that they manage and control. They want the flexibility to rotate keys and enforce least privilege access to the encryption keys.\n\nWhich S3 encryption method and key management option should the company use?",
+    multi: false,
+    options: [
+      "Enable S3 default encryption with Amazon S3-managed keys (SSE-S3).",
+      "Enable S3 server-side encryption with AWS managed keys (SSE-KMS) and default KMS key policies.",
+      "Enable S3 server-side encryption with customer-provided keys (SSE-C) and manage the keys on-premises.",
+      "Enable S3 server-side encryption with AWS KMS keys and create custom key policies for key rotation and access control."
+    ],
+    correct: [3],
+    explanation: "SSE-KMS con CMKs (Customer Managed Keys) y políticas de clave personalizadas permite: usar claves que la empresa gestiona, rotar claves, definir quién puede usarlas con políticas de mínimo privilegio, y auditar su uso con CloudTrail. SSE-S3 no da control sobre las claves. SSE-KMS con políticas por defecto carece del control granular requerido. SSE-C es más compleja operacionalmente y carece de rotación automática y auditoría integradas."
+  },
+  {
+    id: 12,
+    text: "A healthcare application hosted on AWS uses Amazon EC2 instances to manage sensitive patient data that must comply with regulatory security standards. The data is stored on EBS volumes attached to the EC2 instances. The company's security policy mandates that all data at rest be encrypted.\n\nWhich action should the IT department take to secure the EBS volumes?",
+    multi: false,
+    options: [
+      "Encrypt the EBS volumes with Amazon S3 server-side encryption.",
+      "Use AWS Certificate Manager to apply SSL/TLS certificates to the EBS volumes.",
+      "Enable EBS encryption with AWS Key Management Service (KMS) keys.",
+      "Run a third-party encryption tool to encrypt data on the EBS volumes before storage."
+    ],
+    correct: [2],
+    explanation: "Amazon EBS soporta cifrado de volúmenes y snapshots de forma nativa. Habilitando el cifrado con AWS KMS CMKs, el departamento TI asegura que todos los datos del volumen se cifren con claves gestionadas en KMS, cumpliendo los estándares regulatorios del sector salud. El cifrado es transparente y no afecta el rendimiento del volumen. S3 SSE es para S3, no EBS. AWS Certificate Manager es para SSL/TLS, no cifrado en reposo. Herramientas de terceros añaden overhead operacional innecesario."
+  },
+  {
+    id: 13,
+    text: "A marketing agency frequently runs ad-hoc queries on datasets stored in Amazon S3 using Amazon Athena. They need to establish strict access control measures to ensure that different departments within the agency can only view and run queries relevant to their specific projects and cannot access others' query logs or results.\n\nWhat approach should the agency adopt to enforce these fine-grained permission controls within their shared AWS account?",
+    multi: false,
+    options: [
+      "Create an individual AWS Glue Data Catalog database for each department's datasets and configure IAM policies to control access to each database.",
+      "Set up a separate Athena workgroup for each department, controlling access to query execution and history by attaching IAM policies to each workgroup.",
+      "Organize data into different S3 prefixes per department and create corresponding IAM roles, allowing departments to execute queries only on their assigned prefixes.",
+      "Implement Amazon S3 access points for each department's data and associate them with specific IAM policies to manage query execution permissions."
+    ],
+    correct: [1],
+    explanation: "Los Athena workgroups permiten separar cargas de trabajo por equipos o aplicaciones. Creando workgroups diferentes para cada departamento, se puede aislar la ejecución de consultas y el acceso a historiales. Las IAM policies adjuntas a cada workgroup gestionan los permisos eficientemente. Las bases de datos Glue organizan datos pero no controlan el historial de consultas. Los prefijos S3 controlan el acceso a los datos pero no al proceso de consulta. Los access points S3 no ofrecen la granularidad necesaria para controlar el historial de Athena."
+  },
+  {
+    id: 14,
+    text: "A data engineer is setting up an AWS Glue job to process data hosted in an Amazon S3 bucket. Although the IAM role and AWS Glue connections are correctly configured, an error message appears during job execution, suggesting an issue with the S3 VPC endpoint configuration.\n\nTo remedy this and successfully connect the AWS Glue job to the S3 bucket, what action should the data engineer take?",
+    multi: false,
+    options: [
+      "Confirm that the S3 endpoint policy attached to the VPC endpoint allows traffic from the AWS Glue service.",
+      "Modify the IAM role attached to the AWS Glue job to include the necessary permissions for S3 access.",
+      "Adjust the VPC endpoint's security group to permit outbound connections to the S3 service.",
+      "Ensure that the VPC endpoint for S3 is correctly associated with the subnet used by the AWS Glue job."
+    ],
+    correct: [0],
+    explanation: "La causa más común de este error es que la política del VPC endpoint de S3 no permite el tráfico necesario del servicio AWS Glue. Las políticas de VPC endpoint proporcionan control granular sobre el uso del endpoint, y si AWS Glue no está explícitamente permitido, el job no puede acceder a los datos S3. Modificar el IAM role no resuelve problemas de red. Los Security Groups de VPC endpoints no funcionan igual para puntos de enlace de gateway. La asociación de subred es necesaria pero no es lo que indica el mensaje de error."
+  },
+  {
+    id: 15,
+    text: "A legal firm wishes to store highly confidential case files in Amazon S3, with a requirement that only designated lawyers can view and edit the files. The firm also needs the ability to track which specific users accessed or modified a file.\n\nWhat measure should the firm implement to control and audit file access?",
+    multi: false,
+    options: [
+      "Apply an S3 bucket policy that restricts access to the files based on IAM user roles and enable S3 access logging for audit trails.",
+      "Enable S3 Versioning and MFA Delete on the bucket, requiring multi-factor authentication for file access.",
+      "Use S3 Object Lock with governance mode to prevent files from being deleted or overwritten and apply IAM policies for access control.",
+      "Encrypt files using S3 server-side encryption with AWS KMS-managed keys (SSE-KMS) and restrict key usage permissions to designated lawyers."
+    ],
+    correct: [3],
+    explanation: "SSE-KMS permite especificar qué clave KMS se usa para el cifrado y luego usar la política de clave para controlar qué usuarios tienen permisos para cifrar y descifrar. AWS KMS también registra el uso de claves en AWS CloudTrail, permitiendo ver qué usuario accedió o modificó un archivo. Las bucket policies y S3 access logging no ofrecen el seguimiento granular de uso de claves que KMS proporciona. S3 Versioning protege contra eliminaciones pero no controla el acceso a nivel de usuario. S3 Object Lock es para retención de cumplimiento, no para control de acceso de usuarios."
+  },
+  {
+    id: 16,
+    text: "A data engineer is experiencing permission-related errors when trying to access data through an Amazon QuickSight dashboard, which relies on Amazon Athena queries running on data in an S3 bucket.\n\nWhat could be the possible reasons for these errors? (Select TWO.)",
+    multi: true,
+    options: [
+      "The S3 bucket where the data is stored has block public access settings enabled, preventing QuickSight from accessing the data.",
+      "QuickSight's SPICE capacity has been reached, and it is unable to import more data from Athena.",
+      "QuickSight is not granted the necessary permissions within the AWS Identity and Access Management (IAM) policy to access the Athena tables.",
+      "The KMS key policies do not include QuickSight as a principal, hindering decryption of the data queried by Athena.",
+      "The VPC settings are restricting QuickSight's access to the S3 bucket where the data resides."
+    ],
+    correct: [2, 3],
+    explanation: "Si QuickSight no tiene los permisos IAM apropiados, no podrá ejecutar consultas en Athena, generando errores de permisos. Cuando los datos en S3 están cifrados con una clave KMS, cualquier servicio (incluyendo QuickSight) requiere permisos para usar la clave en el descifrado. Si QuickSight no está listado como principal en la política de la clave KMS, no puede descifrar los datos. Block public access no afecta servicios como QuickSight que usan permisos IAM autenticados. La capacidad SPICE afecta el rendimiento, no genera errores de permisos. Las configuraciones VPC raramente son la causa de errores de permisos en QuickSight."
+  },
+  {
+    id: 17,
+    text: "A healthcare analytics company must ensure that its Amazon RDS instances are compliant with specific configuration requirements due to regulatory standards. The company needs to continuously monitor and record the RDS instances' configurations and be alerted if there are any changes that deviate from the established compliance standards.\n\nWhich AWS service should they use to maintain configuration compliance and receive notifications about changes?",
+    multi: false,
+    options: [
+      "Set up AWS CloudTrail to log all actions taken on the RDS instances and analyze the logs for configuration changes.",
+      "Implement AWS Config to monitor the configurations of the RDS instances and use AWS Config rules to evaluate compliance with the desired configuration settings.",
+      "Enable Amazon RDS Performance Insights to track the performance metrics and configuration data of the RDS instances.",
+      "Utilize Amazon CloudWatch Events to respond to state changes in the RDS instances and notify the administrators of configuration changes."
+    ],
+    correct: [1],
+    explanation: "AWS Config es un servicio que permite evaluar, auditar y monitorear continuamente las configuraciones de recursos AWS. Permite automatizar la evaluación de configuraciones registradas contra configuraciones deseadas. Con AWS Config, la empresa puede configurar reglas para verificar el cumplimiento y recibir notificaciones mediante SNS cuando hay cambios que se desvían. CloudTrail registra acciones pero no monitorea compliance de configuraciones. RDS Performance Insights es para ajuste de rendimiento. CloudWatch Events responde a cambios de estado pero no evalúa cumplimiento."
+  },
+  {
+    id: 18,
+    text: "A global enterprise is using Amazon RDS for its production environment. The CISO mandates a solution to ensure the ability to perform security analysis and audit database activity, including tracking which user performed which action on the database. The company requires that the solution should also track API calls made to the Amazon RDS service, even if they do not directly modify the database.\n\nWhich AWS service should the company use to meet these requirements?",
+    multi: false,
+    options: [
+      "Activate AWS CloudTrail to log, continuously monitor, and retain account activity related to actions made on the Amazon RDS service.",
+      "Enable Amazon RDS Enhanced Monitoring to monitor database engine-specific metrics, which can be used for auditing purposes.",
+      "Implement Amazon RDS Performance Insights to gather data on database load and filter it by SQL statement, wait event, user, and host.",
+      "Use AWS Config to record and evaluate the configurations of your RDS resources and track changes to the environment."
+    ],
+    correct: [0],
+    explanation: "AWS CloudTrail proporciona historial de eventos de la actividad de la cuenta AWS, incluyendo acciones tomadas a través de la Consola de Administración, SDKs, herramientas CLI y otros servicios. Está diseñado para habilitar gobernanza, cumplimiento y auditoría de riesgos, incluyendo todas las llamadas API al servicio RDS. RDS Enhanced Monitoring proporciona métricas del sistema operativo en tiempo real, no rastrea actividad de usuarios ni llamadas API. RDS Performance Insights es para ajuste de rendimiento, no auditoría. AWS Config es para configuraciones de recursos, no para auditar acciones de usuarios de base de datos."
+  },
+  {
+    id: 19,
+    text: "An e-commerce company has deployed its application on Amazon EC2 instances and uses Amazon RDS for the backend database. The EC2 instances and RDS instance are in the same VPC. The company wants to enforce security best practices to ensure that only the EC2 instances can communicate with the RDS instance on the database port, and no external database connections are allowed.\n\nWhich of the following security group rules should be configured? (Select TWO.)",
+    multi: true,
+    options: [
+      "Create an inbound security group rule for the RDS security group that allows traffic on the database port from the public IP addresses of the EC2 instances.",
+      "Configure an outbound security group rule for the EC2 instances' security group that allows traffic to the RDS instance's security group on the database port.",
+      "Set an inbound security group rule for the RDS security group that allows traffic on the database port from the associated EC2 instances' security group.",
+      "Assign a security group to the RDS instance that has an inbound rule allowing all IP addresses (0.0.0.0/0) to access the database port for easy management.",
+      "Establish a VPC peering connection between the VPC of the EC2 instances and the RDS instance, and configure the relevant security group rules."
+    ],
+    correct: [1, 2],
+    explanation: "La regla de salida en el security group de EC2 permite a los servidores de aplicación iniciar comunicación con la instancia RDS en el puerto de base de datos especificado. La regla de entrada en el security group de RDS que permite tráfico del security group de EC2 garantiza que solo los servidores de aplicación puedan acceder a la BD, cumpliendo el principio de mínimo privilegio. Usar IPs públicas es inseguro (son dinámicas). Permitir 0.0.0.0/0 expone la BD a internet. VPC peering es innecesario dentro del mismo VPC."
+  },
+  {
+    id: 20,
+    text: "A financial services company hosts its transactional database on Amazon RDS for PostgreSQL. The database credentials are rotated every 30 days to reduce the risk of unauthorized access. The application developers do not want to make code changes each time the credentials are rotated.\n\nWhich service should be used to manage the database credentials with the LEAST operational effort?",
+    multi: false,
+    options: [
+      "Store the database credentials in an encrypted Amazon S3 bucket and allow the application to retrieve them when needed, using S3 bucket policies to control access.",
+      "Utilize AWS Key Management Service (KMS) to create and manage encryption keys, and store the encrypted credentials in an Amazon DynamoDB table.",
+      "Implement AWS Secrets Manager to automatically rotate and manage database credentials, allowing the application to retrieve them with API calls.",
+      "Configure an IAM role with permission to access the database, and modify the application to retrieve temporary credentials from the IAM role."
+    ],
+    correct: [2],
+    explanation: "AWS Secrets Manager está específicamente diseñado para gestionar secretos, incluyendo la capacidad de rotar credenciales automáticamente sin requerir cambios en el código de la aplicación. La aplicación puede recuperar las credenciales más recientes mediante la API de Secrets Manager. Almacenar credenciales en S3 no es una práctica recomendada y no proporciona rotación automática. KMS gestiona claves de cifrado, no es una solución de gestión de secretos. Los IAM roles con credenciales temporales son para acceso a servicios AWS, no para gestionar contraseñas de bases de datos."
+  },
+  {
+    id: 21,
+    text: "A multinational corporation operates in multiple AWS Regions and each region has a dedicated research team. The company maintains a collection of proprietary datasets in an Amazon S3-based data warehouse. A data engineering team has been tasked with ensuring that each research team can only query datasets pertaining to their specific region. The solution should be scalable and maintain minimal operational overhead.\n\nWhich combination of actions should the data engineering team take? (Select TWO.)",
+    multi: true,
+    options: [
+      "Implement S3 bucket policies that conditionally grant access based on the originating region of the request.",
+      "Register each regional dataset with separate Amazon Redshift Spectrum external schemas and restrict access using IAM policies.",
+      "Use AWS Lake Formation to set up cross-account data sharing and enforce region-based access controls to the datasets.",
+      "Apply tag-based access control on S3 objects, tagging each dataset with its corresponding region and modifying IAM roles to enforce these tags.",
+      "Create individual S3 endpoints for each region through Amazon VPC and associate them with respective IAM roles for the research teams."
+    ],
+    correct: [2, 3],
+    explanation: "AWS Lake Formation permite control de acceso detallado a datos en S3 y puede gestionar permisos a nivel de dataset configurado por región, con menos overhead operacional. El control de acceso basado en tags permite aplicar tags a objetos S3 y gestionar acceso vía políticas IAM. Etiquetando datasets con el tag de región y modificando roles IAM, se controla acceso granular eficientemente. Las S3 bucket policies no están diseñadas para condicionarse por región de origen. Redshift Spectrum con esquemas separados por región aumenta la complejidad operacional. Los endpoints VPC por región no son escalables ni directamente relacionados con control de acceso IAM."
+  },
+  {
+    id: 22,
+    text: "An organization is creating a data lake on AWS and requires granular access control. They need to grant specific users access to certain rows and columns within their datasets. The organization's teams will query the data using a combination of Amazon Athena, Amazon Redshift Spectrum, and Apache Hive on Amazon EMR.\n\nWhich AWS service should the organization implement to manage data permissions efficiently?",
+    multi: false,
+    options: [
+      "Manage access through S3 bucket policies and IAM roles for row and column-level security.",
+      "Deploy Apache Ranger on Amazon EMR for granular access control and utilize Amazon Redshift for querying.",
+      "Use Redshift security groups and views for row and column-level permissions, querying with Athena and Redshift Spectrum.",
+      "Use AWS Lake Formation to define fine-grained data access policies and facilitate queries through supported AWS services."
+    ],
+    correct: [3],
+    explanation: "AWS Lake Formation simplifica y centraliza la configuración de un data lake seguro. Proporciona control de acceso granular a datos en S3, permitiendo definir acceso a filas y columnas específicas. Lake Formation se integra perfectamente con Athena, Redshift Spectrum y Apache Hive en EMR, cumpliendo los requisitos con el menor overhead operacional. Las S3 bucket policies con IAM no ofrecen seguridad a nivel de filas/columnas de forma nativa. Apache Ranger requiere configuración adicional compleja. Los security groups y vistas de Redshift son específicos de ese entorno y no aplican a S3 para un data lake."
+  },
+  {
+    id: 23,
+    text: "A data scientist is setting up a new machine learning project in Amazon SageMaker and plans to use AWS Glue for data preprocessing tasks. However, when attempting to launch a data preprocessing job from SageMaker, the scientist encounters a permission error.\n\nWhat action should the data scientist take to resolve this issue and successfully run AWS Glue jobs from Amazon SageMaker?",
+    multi: false,
+    options: [
+      "Attach the AmazonSageMakerFullAccess policy to the data scientist's IAM role.",
+      "Update the trust policy in the data scientist's IAM role to include the AWS Glue service principal.",
+      "Assign the AWSGlueServiceNotebookRole managed policy to the data scientist's IAM user.",
+      "Ensure the data scientist's IAM role has the appropriate Glue permissions and a trust relationship with SageMaker."
+    ],
+    correct: [3],
+    explanation: "Para que el científico de datos ejecute jobs de AWS Glue desde SageMaker, su IAM role debe tener los permisos necesarios para acceder a recursos de Glue Y debe establecer una relación de confianza con el servicio SageMaker (para que SageMaker pueda asumir el rol en nombre del usuario). Ambos elementos son cruciales para la integración. AmazonSageMakerFullAccess no aborda los permisos específicos de Glue. El trust policy con el principal de Glue es cuando Glue necesita asumir el rol, no al revés. AWSGlueServiceNotebookRole es para operaciones de notebooks de Glue, no para el contexto de SageMaker."
+  },
+  {
+    id: 24,
+    text: "A data engineering team is building an ETL pipeline that requires secure access to a database hosted on Amazon RDS. The pipeline will run on AWS Lambda, and the team needs to manage the database credentials securely.\n\nWhich AWS service should the team use to store and retrieve the database credentials securely for the Lambda function?",
+    multi: false,
+    options: [
+      "AWS Secrets Manager",
+      "Amazon Simple Storage Service (S3)",
+      "AWS Systems Manager Parameter Store",
+      "AWS Identity and Access Management (IAM)"
+    ],
+    correct: [0],
+    explanation: "AWS Secrets Manager está diseñado específicamente para almacenar y gestionar información sensible como credenciales de bases de datos de forma segura. Proporciona funcionalidad integrada para rotar credenciales automáticamente. La función Lambda puede recuperar las credenciales de forma segura desde Secrets Manager. Amazon S3 no está diseñado para gestionar datos de configuración sensibles con las mismas características de seguridad. Systems Manager Parameter Store es viable pero no ofrece la rotación automática de secretos de Secrets Manager. IAM gestiona acceso a servicios AWS, no credenciales de bases de datos."
+  },
+  {
+    id: 25,
+    text: "A logistics company integrates IoT devices in their fleet to track vehicle locations. The location data is stored in an Amazon RDS instance. The company wants to record the last known locations of vehicles at the end of each day in an Amazon DynamoDB table for quick access. A data engineer has developed an AWS Lambda function to transfer this end-of-day location data from RDS to DynamoDB.\n\nHow should the data engineer automate the execution of the Lambda function to ensure the daily transfer of location data to DynamoDB?",
+    multi: false,
+    options: [
+      "Trigger the Lambda function using Amazon EventBridge based on a scheduled rule corresponding to the end of each day.",
+      "Use Amazon S3 event notifications to invoke the Lambda function when new location data is uploaded to an S3 bucket.",
+      "Configure Amazon RDS to directly invoke the Lambda function upon detecting the end-of-day data entry.",
+      "Create an AWS Step Functions state machine to call the Lambda function in response to AWS CloudTrail logs indicating data entry completion."
+    ],
+    correct: [0],
+    explanation: "Amazon EventBridge puede usarse para activar funciones Lambda de forma programada. El ingeniero puede configurar una regla para invocar la función Lambda al final de cada día, asegurando la transferencia diaria de datos de ubicación de RDS a DynamoDB. Este enfoque es eficiente para tareas que deben ocurrir en intervalos regulares y requiere mínima intervención manual. S3 event notifications son para cambios en S3, no en RDS. Amazon RDS no puede invocar directamente funciones Lambda por eventos de datos. Usar Step Functions con CloudTrail sería excesivamente complejo para esta tarea."
+  },
+  {
+    id: 26,
+    text: "A company's AWS Step Functions state machine, which orchestrates a data pipeline involving Amazon EMR jobs for data processing and storage in Amazon S3 and Amazon Redshift, is not executing the EMR jobs.\n\nWhat steps should be taken to troubleshoot this issue? (Select TWO.)",
+    multi: true,
+    options: [
+      "Inspect the IAM roles and policies attached to the Step Functions to ensure they have the necessary permissions to execute EMR jobs and access the required S3 buckets.",
+      "Review the Amazon CloudWatch Logs for error messages related to the Step Functions state machine and EMR jobs to identify any execution issues.",
+      "Confirm that the VPC network ACLs and security groups associated with the EMR cluster allow outbound connections to the required endpoints.",
+      "Check the Step Functions state machine definition for any syntactical errors or misconfigurations in the EMR job specifications.",
+      "Utilize AWS CloudTrail to monitor for any failed API calls made by the Step Functions state machine that could indicate permission or configuration problems."
+    ],
+    correct: [0, 1],
+    explanation: "Los roles y políticas IAM son cruciales para otorgar a los servicios AWS los permisos necesarios para interactuar entre sí. Si la state machine carece de permisos para ejecutar jobs EMR o acceder a S3, fallará en ejecutar las tareas. CloudWatch Logs proporciona mensajes de error detallados que ayudan a diagnosticar por qué la state machine no puede ejecutar los jobs EMR. Estos logs son esenciales para el troubleshooting. La configuración de red (NACLs) es menos probable que sea la causa. CloudTrail es útil para auditoría pero CloudWatch Logs y verificación de IAM son métodos más directos para problemas operacionales."
+  },
+  {
+    id: 27,
+    text: "A company stores critical documents in an Amazon S3 bucket and needs to track all write activities to this bucket for security analysis. They want to ensure that every instance of data being added or modified in this bucket is recorded in a separate S3 bucket within the same AWS Region.\n\nWhich actions should a data engineer take?",
+    multi: false,
+    options: [
+      "Enable S3 Server Access Logging.",
+      "Configure S3 Event Notifications.",
+      "Enable AWS CloudTrail with data event logging.",
+      "Configure AWS Config for S3 bucket monitoring."
+    ],
+    correct: [2],
+    explanation: "Con AWS CloudTrail y el registro de eventos de datos habilitado, la empresa puede rastrear y registrar todas las operaciones de escritura (PUT, POST, DELETE) realizadas en su bucket S3. Estos logs pueden dirigirse a otro bucket S3 en la misma región para almacenamiento y análisis. CloudTrail proporciona información detallada sobre las llamadas API incluyendo la identidad del llamador, tiempo, parámetros de la solicitud y elementos de respuesta. S3 Server Access Logging es menos completo para auditoría de API. S3 Event Notifications son para alertas en tiempo real, no para logging detallado. AWS Config registra cambios de configuración, no operaciones de escritura de datos."
+  },
+  {
+    id: 28,
+    text: "A healthcare organization stores patient records from multiple regions in an Amazon S3 bucket, which is used for regional health analysis. A data compliance team needs to ensure that health analysts can only access patient records from their specific region to comply with local privacy regulations.\n\nWhich solution will enable this requirement with the minimum amount of operational effort?",
+    multi: false,
+    options: [
+      "Segment the patient records into different S3 prefixes per region, and use IAM bucket policies to restrict access to analysts based on their regional assignment.",
+      "Distribute the data across multiple AWS Regions correlating to the patient locations, and implement IAM policies to grant data access to analysts within the same geographical region.",
+      "Import the data into an Amazon Aurora database, set up regional schemas, and create IAM policies that grant access to these schemas based on the analyst's region.",
+      "Implement AWS Lake Formation, register the S3 bucket as a data lake, and utilize Lake Formation's fine-grained access control to manage region-specific data access."
+    ],
+    correct: [3],
+    explanation: "AWS Lake Formation simplifica la gestión de un data lake y proporciona control de acceso granular. Al registrar el bucket S3 como data lake, la organización puede usar las características de seguridad a nivel de fila de Lake Formation para asegurar que los analistas solo accedan a datos de su región específica, cumpliendo las regulaciones de privacidad. Los prefijos S3 con IAM policies son menos granulares y escalables. Distribuir datos en múltiples regiones AWS es complejo y puede no cumplir requisitos de residencia de datos. Importar a Aurora sería operacionalmente muy complejo."
+  },
+  {
+    id: 29,
+    text: "A company is storing sensitive documents in an Amazon S3 bucket and requires that only certain users are allowed to download and decrypt these documents. They want to ensure that the security controls in place enforce this policy strictly, even if other users have S3 bucket access.\n\nWhich of the following solutions ensures that only authorized users can download and decrypt the sensitive documents?",
+    multi: false,
+    options: [
+      "Enable server-side encryption on the S3 bucket using Amazon S3-managed keys (SSE-S3) and restrict access using S3 bucket policies.",
+      "Use S3 server-side encryption with customer-provided keys (SSE-C) and manage the encryption keys outside of AWS.",
+      "Implement server-side encryption with AWS KMS-managed keys (SSE-KMS) and define key usage permissions in the KMS key policy.",
+      "Configure an IAM policy that restricts downloading documents based on user roles and enforces encryption with SSE-S3."
+    ],
+    correct: [2],
+    explanation: "SSE-KMS con políticas de clave permite definir permisos detallados sobre quién puede usar las claves para descifrar los datos. Con KMS, se puede crear una política de clave que especifique qué usuarios o roles IAM pueden usar las claves, aplicando estrictamente los permisos de descifrado incluso si otros usuarios tienen acceso al bucket S3. SSE-S3 no permite control granular de claves de cifrado por usuario. SSE-C requiere gestionar claves fuera de AWS sin hacer cumplir políticas a través de KMS. IAM policies pueden restringir descargas pero no controlan quién puede descifrar si los documentos ya fueron descargados."
+  },
+  {
+    id: 30,
+    text: "A financial services firm needs to securely handle customers' PII stored in Amazon S3 while allowing their applications to process the data on-the-fly. The firm requires that PII is dynamically redacted when accessed, ensuring the data is never exposed in its entirety outside the secure environment, while still being available for authorized processing. The solution must encrypt data at rest and monitor access.\n\nWhat combination of services should the firm use to meet these requirements?",
+    multi: false,
+    options: [
+      "Use S3 Versioning to maintain object versions with PII, encrypt using S3 server-side encryption with Amazon S3-managed keys (SSE-S3), and monitor access with S3 access logs.",
+      "Apply S3 Lifecycle policies to automate the transition of PII data to S3 Glacier, enforce encryption with SSE-KMS, and track requests using S3 Event Notifications.",
+      "Implement S3 Object Lambda to redact PII on retrieval, enable S3 server-side encryption with AWS KMS-managed keys, and log access with AWS CloudTrail.",
+      "Configure S3 Intelligent-Tiering to manage cost for PII data storage, implement encryption with SSE-KMS, and utilize AWS Config for auditing access."
+    ],
+    correct: [2],
+    explanation: "S3 Object Lambda permite transformar datos mientras se recuperan de S3, habilitando la redacción de PII antes de que llegue al usuario final. El cifrado SSE-KMS proporciona cifrado robusto en reposo con políticas de acceso detalladas y registro de uso de claves en CloudTrail para cumplimiento y auditoría. S3 Versioning y SSE-S3 no ofrecen transformación de datos en tiempo real. Las Lifecycle policies son para gestión de costos y archivado, no para redacción dinámica. S3 Intelligent-Tiering gestiona costos pero no transforma datos; AWS Config no es para logging de acceso en tiempo real."
+  },
+  {
+    id: 31,
+    text: "A corporation is planning to adopt a data mesh architecture to enhance its data analytics capabilities. The data mesh should enable centralized data governance and access management while facilitating comprehensive data analysis. The corporation has chosen to utilize AWS Glue for cataloging their data and managing ETL processes.\n\nWhich combination of AWS services will implement a data mesh? (Select TWO.)",
+    multi: true,
+    options: [
+      "Use Amazon S3 for scalable data storage and Amazon Athena for serverless querying and analysis.",
+      "Use Amazon S3 for centralized data storage and use Amazon QuickSight for business intelligence and analytics.",
+      "Use Amazon DynamoDB for structured data storage and Amazon SageMaker for advanced data analysis and machine learning.",
+      "Use AWS Lake Formation to establish and manage centralized data governance and fine-grained access control.",
+      "Use Amazon RDS to manage relational database storage and Amazon Redshift for complex data warehousing and analytics tasks."
+    ],
+    correct: [0, 3],
+    explanation: "Amazon S3 ofrece almacenamiento de objetos altamente escalable y duradero, ideal para un data mesh. Athena complementa S3 con capacidades de consulta interactiva serverless mediante SQL directo sin provisionamiento de servidores. AWS Lake Formation mejora AWS Glue con gobernanza de datos centralizada, simplificando la gestión del data lake con permisos granulares seguros. QuickSight es principalmente una herramienta de visualización. DynamoDB y SageMaker no están diseñados para gobernanza de datos ni flujos ETL tradicionales de data mesh. RDS y Redshift no abordan la gobernanza centralizada en el contexto de data mesh."
+  },
+  {
+    id: 32,
+    text: "A retail company uses Amazon Aurora to manage inventory data. The company's Aurora DB cluster resides in a private subnet. A team member has created an AWS Lambda function to manage inventory levels within the Aurora DB cluster. To maintain data security, the company wants to ensure that this Lambda function can access the Aurora DB cluster only through the private network.\n\nWhat steps should be taken to enable private connectivity from the Lambda function to the Aurora DB cluster with minimal administrative effort? (Select TWO.)",
+    multi: true,
+    options: [
+      "Enable the private DNS name feature for the Aurora DB cluster endpoint.",
+      "Modify the security group of the Aurora DB cluster to allow incoming connections on the appropriate port from the Lambda function.",
+      "Deploy the Lambda function within a public subnet and configure a NAT Gateway for outbound connections.",
+      "Ensure the Lambda function is configured to run in the same VPC as the Aurora DB cluster, within a private subnet.",
+      "Implement VPC peering between the VPC containing the Lambda function and the VPC containing the Aurora DB cluster."
+    ],
+    correct: [1, 3],
+    explanation: "Ajustar las reglas del security group de Aurora para permitir conexiones desde la función Lambda habilita comunicación privada y segura sin exponer la base de datos a internet. Configurar la Lambda para operar en el mismo VPC y subred privada donde reside el cluster Aurora asegura que la BD sea accesible sin atravesar internet, en línea con las mejores prácticas de AWS. El DNS privado está habilitado por defecto y no facilita directamente el acceso de Lambda. Colocar Lambda en subred pública con NAT Gateway aún enruta a través de internet. VPC peering es innecesario dentro del mismo VPC."
+  },
+  {
+    id: 33,
+    text: "A large enterprise has multiple AWS accounts and a complex environment with numerous AWS services in use. They need to aggregate, manage, and analyze audit logs across all these accounts and services for security and compliance auditing. The enterprise wants a centralized solution that simplifies log management and analysis.\n\nWhich AWS service should the enterprise implement to efficiently aggregate, manage, and analyze audit logs from multiple AWS accounts and services?",
+    multi: false,
+    options: [
+      "Use AWS CloudTrail Lake to aggregate, manage, and analyze audit logs across all AWS accounts and services.",
+      "Configure Amazon S3 event notifications to consolidate logs from various AWS services and accounts.",
+      "Implement AWS Config to record configuration changes and aggregate logs for auditing purposes.",
+      "Set up AWS Lambda functions to gather and process logs from different AWS services and accounts."
+    ],
+    correct: [0],
+    explanation: "AWS CloudTrail Lake está diseñado específicamente para la agregación, gestión y análisis de logs de auditoría en múltiples cuentas y servicios AWS. Proporciona una solución centralizada que permite consolidar logs de CloudTrail en un único lugar. CloudTrail Lake soporta capacidades de consulta avanzadas y almacenamiento de logs a largo plazo. S3 event notifications no están orientadas a la agregación y análisis de logs multi-cuenta. AWS Config registra cambios de configuración pero no proporciona las capacidades analíticas de CloudTrail Lake. AWS Lambda requeriría desarrollo personalizado significativo sin escalar eficientemente."
+  }
+];
+
+let answered = new Array(questions.length).fill(false);
+let score = 0;
+
+function buildExam() {
+  const container = document.getElementById('examContainer');
+
+  questions.forEach((q, qi) => {
+    const letters = ['A','B','C','D','E'];
+    const delay = Math.min(qi * 40, 600);
+
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.style.animationDelay = delay + 'ms';
+    card.id = 'q-' + qi;
+
+    const multiLabel = q.multi ? '<span class="multi-label">SELECCIONAR DOS</span>' : '';
+
+    let optionsHtml = q.options.map((opt, oi) => `
+      <button class="option" data-qi="${qi}" data-oi="${oi}" onclick="selectOption(this, ${qi}, ${oi}, ${q.multi})">
+        <span class="opt-marker" data-letter="${letters[oi]}"></span>
+        <span>${opt}</span>
+      </button>
+    `).join('');
+
+    card.innerHTML = `
+      <div class="q-header">
+        <span class="q-num">Q${String(q.id).padStart(2,'0')}</span>
+        <span class="q-text">${q.text.replace(/\n\n/g,'<br><br>')}${multiLabel}</span>
+      </div>
+      <hr class="divider">
+      <div class="options" id="opts-${qi}">${optionsHtml}</div>
+      <button class="check-btn" id="btn-${qi}" onclick="checkAnswer(${qi})" disabled>Verificar respuesta</button>
+      <div class="feedback-box" id="fb-${qi}">
+        <div class="feedback-title" id="fb-title-${qi}">✓ CORRECTO</div>
+        <div class="feedback-text" id="fb-text-${qi}"></div>
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+function selectOption(el, qi, oi, isMulti) {
+  if (answered[qi]) return;
+  const opts = document.querySelectorAll(`[data-qi="${qi}"]`);
+
+  if (!isMulti) {
+    opts.forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+  } else {
+    el.classList.toggle('selected-multi');
+  }
+
+  const btn = document.getElementById('btn-' + qi);
+  const hasSelection = document.querySelector(`[data-qi="${qi}"].selected`) ||
+                       document.querySelector(`[data-qi="${qi}"].selected-multi`);
+  btn.disabled = !hasSelection;
+}
+
+function checkAnswer(qi) {
+  if (answered[qi]) return;
+  answered[qi] = true;
+
+  const q = questions[qi];
+  const opts = document.querySelectorAll(`[data-qi="${qi}"]`);
+  const btn = document.getElementById('btn-' + qi);
+  const fb = document.getElementById('fb-' + qi);
+  const fbTitle = document.getElementById('fb-title-' + qi);
+  const fbText = document.getElementById('fb-text-' + qi);
+
+  let selected = [];
+  opts.forEach((o, i) => {
+    if (o.classList.contains('selected') || o.classList.contains('selected-multi')) {
+      selected.push(i);
+    }
+  });
+
+  opts.forEach(o => o.classList.add('revealed'));
+
+  const isCorrect = selected.length === q.correct.length &&
+    selected.every(s => q.correct.includes(s)) &&
+    q.correct.every(c => selected.includes(c));
+
+  opts.forEach((o, i) => {
+    if (q.correct.includes(i)) {
+      o.classList.add('correct-answer');
+    } else if (selected.includes(i) && !q.correct.includes(i)) {
+      o.classList.add('wrong-answer');
+    } else {
+      o.classList.add('faded');
+    }
+  });
+
+  if (isCorrect) {
+    score++;
+    fbTitle.textContent = '✓ CORRECTO';
+    fb.classList.remove('wrong');
+  } else {
+    fbTitle.textContent = '✗ INCORRECTO';
+    fb.classList.add('wrong');
+  }
+
+  fbText.textContent = q.explanation;
+  fb.classList.add('show');
+  btn.disabled = true;
+  btn.textContent = isCorrect ? '✓ Correcto' : '✗ Incorrecto';
+  btn.style.background = isCorrect ? 'var(--correct)' : 'var(--incorrect)';
+  document.getElementById('q-' + qi).classList.add('answered');
+
+  updateProgress();
+
+  if (answered.every(Boolean)) {
+    showResult();
+  }
+}
+
+function updateProgress() {
+  const answeredCount = answered.filter(Boolean).length;
+  const pct = (answeredCount / questions.length) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('scoreDisplay').innerHTML =
+    `Progreso: ${answeredCount}/${questions.length} &nbsp;·&nbsp; <strong>Correctas: ${score}</strong>`;
+}
+
+function showResult() {
+  const pct = Math.round((score / questions.length) * 100);
+  const banner = document.createElement('div');
+  banner.className = 'result-banner show';
+  banner.innerHTML = `
+    <div class="result-score">${pct}%</div>
+    <div class="result-label">${score} de ${questions.length} respuestas correctas</div>
+    <p style="color:var(--muted);margin-top:16px;font-size:14px;">
+      ${pct >= 70 ? '¡Buen trabajo! Estás en camino para la certificación.' : 'Sigue practicando. Revisa las explicaciones para reforzar los conceptos.'}
+    </p>
+    <button class="restart-btn" onclick="restartExam()">↺ Reiniciar examen</button>
+  `;
+  document.getElementById('examContainer').prepend(banner);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function restartExam() {
+  answered = new Array(questions.length).fill(false);
+  score = 0;
+  document.getElementById('examContainer').innerHTML = '';
+  updateProgress();
+  buildExam();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+buildExam();
+updateProgress();
+</script>
+</body>
+</html>
