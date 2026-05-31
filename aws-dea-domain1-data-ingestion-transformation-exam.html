@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS DEA Domain 1 – Data Ingestion & Transformation</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1f2937;
+    --border: #30363d;
+    --accent: #f97316;
+    --accent2: #fb923c;
+    --green: #22c55e;
+    --red: #ef4444;
+    --blue: #60a5fa;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --correct-bg: rgba(34,197,94,0.08);
+    --correct-border: rgba(34,197,94,0.3);
+    --wrong-bg: rgba(239,68,68,0.06);
+    --wrong-border: rgba(239,68,68,0.2);
+    --selected-bg: rgba(249,115,22,0.1);
+    --selected-border: rgba(249,115,22,0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 40px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+  }
+  .aws-badge {
+    background: var(--accent);
+    color: #fff;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  header h1 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  header .sub {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .score-pill {
+    margin-left: auto;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  #score-num { font-weight: 700; }
+
+  /* ── PROGRESS ── */
+  .progress-bar-wrap {
+    height: 3px;
+    background: var(--border);
+    width: 100%;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* ── MAIN ── */
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ── QUESTION CARD ── */
+  .q-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 24px;
+    transition: border-color 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .q-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+  .q-card.answered::before { background: var(--accent); }
+  .q-card.correct-card::before { background: var(--green); }
+
+  .q-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .q-text {
+    font-size: 15.5px;
+    color: var(--text);
+    margin-bottom: 24px;
+    line-height: 1.7;
+  }
+
+  /* ── OPTIONS ── */
+  .options { display: flex; flex-direction: column; gap: 10px; }
+
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    background: var(--bg);
+    position: relative;
+  }
+  .option:hover:not(.disabled) {
+    border-color: var(--accent);
+    background: var(--selected-bg);
+  }
+  .option.selected {
+    border-color: var(--selected-border);
+    background: var(--selected-bg);
+  }
+  .option.correct {
+    border-color: var(--correct-border);
+    background: var(--correct-bg);
+  }
+  .option.wrong {
+    border-color: var(--wrong-border);
+    background: var(--wrong-bg);
+  }
+  .option.disabled { cursor: default; pointer-events: none; }
+
+  .option-letter {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    transition: all 0.18s;
+    margin-top: 1px;
+  }
+  .option.correct .option-letter {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+  }
+  .option.wrong .option-letter {
+    background: var(--red);
+    border-color: var(--red);
+    color: #fff;
+  }
+  .option.selected:not(.correct):not(.wrong) .option-letter {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .option-text { font-size: 14.5px; color: var(--text); line-height: 1.5; }
+
+  .icon-mark {
+    margin-left: auto;
+    min-width: 18px;
+    opacity: 0;
+    font-size: 16px;
+    transition: opacity 0.2s;
+  }
+  .option.correct .icon-mark,
+  .option.wrong .icon-mark { opacity: 1; }
+
+  /* ── FEEDBACK ── */
+  .feedback {
+    display: none;
+    margin-top: 20px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .feedback.show { display: block; }
+
+  .feedback-header {
+    padding: 10px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .feedback-header.ok { background: rgba(34,197,94,0.12); color: var(--green); }
+  .feedback-header.fail { background: rgba(239,68,68,0.1); color: var(--red); }
+
+  .feedback-body {
+    padding: 16px;
+    background: var(--surface2);
+  }
+  .feedback-body p {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.65;
+    margin-bottom: 8px;
+  }
+  .feedback-body p:last-child { margin-bottom: 0; }
+  .feedback-body strong { color: var(--text); }
+  .feedback-body .tag {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin-right: 6px;
+    font-weight: 600;
+  }
+  .tag.correct-tag { background: rgba(34,197,94,0.15); color: var(--green); }
+  .tag.incorrect-tag { background: rgba(239,68,68,0.12); color: var(--red); }
+
+  /* ── RESULTS PANEL ── */
+  #results-panel {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  #results-panel.show { display: block; }
+  #results-panel h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  #results-panel .final-score {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    margin: 16px 0;
+  }
+  #results-panel .final-score span { color: var(--accent); }
+  #results-panel p { color: var(--muted); font-size: 14px; }
+  .btn-reset {
+    margin-top: 24px;
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: background 0.2s;
+  }
+  .btn-reset:hover { background: var(--accent2); }
+
+  @media (max-width: 600px) {
+    header { padding: 16px; flex-wrap: wrap; }
+    main { padding: 20px 12px 60px; }
+    .q-card { padding: 20px; }
+    #results-panel { padding: 24px; }
+    .final-score { font-size: 40px !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="aws-badge">AWS DEA-C01</div>
+  </div>
+  <div>
+    <h1>Data Ingestion &amp; Transformation</h1>
+    <div class="sub">Domain 1 · Practice Exam · Marco Antonio Camargo Funez</div>
+  </div>
+  <div class="score-pill">Score: <span id="score-num">0</span> / <span id="total-num">0</span></div>
+</header>
+<div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-bar"></div></div>
+
+<main>
+  <div id="results-panel">
+    <h2>¡Examen completado!</h2>
+    <div class="final-score"><span id="final-correct">0</span> / <span id="final-total">0</span></div>
+    <p id="final-pct"></p>
+    <button class="btn-reset" onclick="resetExam()">Reiniciar examen</button>
+  </div>
+  <div id="questions-container"></div>
+</main>
+
+<script>
+const questions = [
+  {
+    text: "A multinational company employs various big data services including Amazon EMR for data processing and Amazon Athena for ad hoc querying. The company's data engineering team requires a unified metadata repository to store and access table schemas and properties across these services. The team also needs to integrate existing metadata from a legacy Apache Hive system into this unified repository.\n\nWhich approach should the data engineering team take to centralize their metadata with minimal development effort?",
+    options: [
+      "Implement AWS Lake Formation to manage metadata and govern data access.",
+      "Utilize Amazon Athena's integration with the existing Hive metastore to import metadata directly.",
+      "Leverage the AWS Glue Data Catalog as the centralized metadata repository.",
+      "Set up an Amazon Aurora PostgreSQL-compatible database as a dedicated metadata store."
+    ],
+    correct: 2,
+    feedback: {
+      explanation: "The AWS Glue Data Catalog is a managed service that serves as a central metadata repository compatible with both Amazon EMR and Amazon Athena. It provides a persistent metadata store for table definitions, schemas, and other properties. The Glue Data Catalog can import metadata from Apache Hive with minimal effort, eliminating the need for manual configurations or additional infrastructure.",
+      wrong: [
+        { label: "AWS Lake Formation", reason: "Designed for building secure data lakes, but requires more development effort than directly using the AWS Glue Data Catalog, which is a built-in feature of Lake Formation." },
+        { label: "Athena + Hive metastore", reason: "While Athena can integrate with an existing Hive metastore, the process is more complex and not as straightforward as using the AWS Glue Data Catalog." },
+        { label: "Amazon Aurora PostgreSQL", reason: "Setting up a dedicated metastore on an RDS instance would require significant setup and maintenance, whereas the AWS Glue Data Catalog is fully managed." }
+      ]
+    }
+  },
+  {
+    text: "A digital marketing agency collects customer interaction data through various cloud-based platforms and wants to analyze this data using Amazon Redshift. The data, sourced from multiple SaaS platforms, must be consolidated into an Amazon S3 bucket before analysis. The agency seeks the most straightforward and maintenance-light method to import this data into S3.\n\nWhich AWS service or feature should the agency use to streamline the transfer of data from the SaaS platforms to Amazon S3 with minimal operational effort?",
+    options: [
+      "Use Amazon EventBridge to route data from SaaS platforms to the S3 bucket.",
+      "Use AWS Data Exchange to import third-party data directly into S3.",
+      "Use Amazon AppFlow for no-code data transfer between SaaS applications and S3.",
+      "Use the AWS Transfer Family to handle SaaS data ingestion into the S3 bucket."
+    ],
+    correct: 2,
+    feedback: {
+      explanation: "Amazon AppFlow is a fully managed integration service that enables secure, no-code data transfer between AWS services and SaaS applications. The agency can easily connect SaaS platforms to Amazon S3, set up data transfer flows, and schedule them without writing custom integration code or managing infrastructure.",
+      wrong: [
+        { label: "Amazon EventBridge", reason: "Primarily an event bus service designed to connect application data from various sources, not specifically tailored for direct data transfer from SaaS platforms to S3." },
+        { label: "AWS Data Exchange", reason: "Mainly for finding, subscribing to, and using third-party data in the cloud. Doesn't cater to custom data transfer needs from a company's specific SaaS tools to S3." },
+        { label: "AWS Transfer Family", reason: "Provides secure file transfers into and out of S3 using SFTP/FTPS/FTP, but not as direct or seamless for connecting SaaS applications compared to AppFlow." }
+      ]
+    }
+  },
+  {
+    text: "A data engineer at a financial analysis firm is responsible for enriching their AWS-based data lake with external financial datasets. The firm requires regular updates of stock market data and economic indicators from various data providers, which should be integrated seamlessly into their Amazon S3-based data lake.\n\nWhich AWS service should the data engineer use to automate the ingestion of these external financial datasets into their data lake with minimal effort?",
+    options: [
+      "Set up a recurring AWS Lambda function to retrieve and upload data from third-party APIs to their S3 data lake.",
+      "Use AWS Data Exchange to subscribe to relevant financial datasets and directly import them into their S3 data lake.",
+      "Implement an AWS Glue crawler to extract data from external data sources and load it into the data lake.",
+      "Configure Amazon AppFlow to create flows between the data providers and S3, syncing the financial datasets to the data lake."
+    ],
+    correct: 1,
+    feedback: {
+      explanation: "AWS Data Exchange makes it easy to find, subscribe to, and use third-party data in the cloud. The firm can set up AWS Data Exchange to automatically import datasets into Amazon S3, ensuring the data lake is regularly updated with minimal manual intervention.",
+      wrong: [
+        { label: "AWS Lambda", reason: "Would require additional development work to handle API integration, data retrieval, and error handling — more operationally complex than AWS Data Exchange." },
+        { label: "AWS Glue crawler", reason: "Glue crawlers scan existing datasets and populate the Glue Data Catalog with metadata. They don't inherently retrieve new data from external providers." },
+        { label: "Amazon AppFlow", reason: "Facilitates transfers between AWS and SaaS applications but isn't tailored for acquiring datasets from a marketplace like AWS Data Exchange." }
+      ]
+    }
+  },
+  {
+    text: "A data engineer needs to perform a one-time extraction of a specific column from a large dataset in Apache Parquet format stored in an Amazon S3 bucket. The requirement is to accomplish this with minimal setup and execution time.\n\nWhich AWS service or feature should the data engineer use to query the single column from the Parquet files with the least operational overhead?",
+    options: [
+      "Utilize Amazon Athena to execute a SQL SELECT statement that retrieves the required column from the Parquet files in the S3 bucket.",
+      "Use S3 Select to run a SQL SELECT statement to extract the required column from the S3 objects.",
+      "Configure Amazon Redshift Spectrum to query the required column directly from the S3 bucket.",
+      "Deploy an Amazon EMR cluster with Hive to perform a SELECT query on the column of the Parquet files stored in S3."
+    ],
+    correct: 1,
+    feedback: {
+      explanation: "S3 Select allows the data engineer to retrieve a subset of data from an object using simple SQL expressions. By enabling querying just the needed column directly within S3, there is no need to provision compute resources or set up additional services. Particularly useful for one-time tasks where a full ETL process is not required.",
+      wrong: [
+        { label: "Amazon Athena", reason: "Involves setting up a database, defining a table, and potentially running a crawler — more overhead compared to S3 Select for a one-time task." },
+        { label: "Redshift Spectrum", reason: "Requires an active Redshift cluster and external table definitions. More suitable for ongoing analytics rather than one-time tasks." },
+        { label: "Amazon EMR with Hive", reason: "Significant overhead for a one-time query task. Involves provisioning resources and configuring Hive, unnecessary when simpler options like S3 Select exist." }
+      ]
+    }
+  },
+  {
+    text: "A company is integrating a business intelligence (BI) tool with their data warehouse hosted on Microsoft SQL Server. The BI team requires regular data extracts to be transformed and stored in Amazon S3 for further analysis. The BI team needs a solution to manage this ETL process efficiently and at a low cost.\n\nWhich AWS service or feature is the most cost-effective for orchestrating an ETL pipeline that extracts data from Microsoft SQL Server, transforms it, and loads it into Amazon S3?",
+    options: [
+      "AWS Data Pipeline",
+      "AWS Glue workflows",
+      "AWS Glue DataBrew",
+      "AWS Batch"
+    ],
+    correct: 1,
+    feedback: {
+      explanation: "AWS Glue is a serverless data integration service. AWS Glue workflows enable creating and orchestrating ETL jobs that extract data from various data stores, transform it, and load it into Amazon S3. Because AWS Glue is serverless, you only pay for compute resources consumed while jobs are running — making it cost-effective.",
+      wrong: [
+        { label: "AWS Data Pipeline", reason: "Designed for reliable data transfer between AWS services and on-premises sources, but not as tightly integrated with Glue's modern ETL capabilities and may not be as cost-effective for complex transformations." },
+        { label: "AWS Glue DataBrew", reason: "A visual data preparation tool focused on data preparation, not on orchestrating ETL workflows — which is what the question emphasizes." },
+        { label: "AWS Batch", reason: "Enables running batch computing jobs but is more suited for batch processing workloads rather than the specific orchestration of ETL workflows." }
+      ]
+    }
+  },
+  {
+    text: "A data engineer is tasked with setting up a schedule for running AWS Glue ETL jobs daily where the exact timing of job execution is not critical. The primary goal is to minimize the operational costs of these ETL jobs.\n\nWhat configuration option should the data engineer choose to optimize for cost without a specific requirement on job completion times?",
+    options: [
+      "Enable job bookmarking in AWS Glue job properties to ensure incremental data processing.",
+      "Select the 'Job Timeout' option in AWS Glue job properties and set a longer duration to allow for cost-effective resource utilization.",
+      "Choose the 'FLEX' execution class in the AWS Glue job properties to leverage spot capacity for running jobs.",
+      "Apply a 'Job Delay' within AWS Glue job properties to schedule execution during non-peak hours for potential cost savings."
+    ],
+    correct: 2,
+    feedback: {
+      explanation: "The 'FLEX' execution class in AWS Glue is designed to run jobs at a lower cost by utilizing spot instances. When precise timing is not an issue, using 'FLEX' allows Glue to optimize job execution by taking advantage of spare capacity in the AWS cloud, which can be more cost-effective compared to on-demand instances.",
+      wrong: [
+        { label: "Job bookmarking", reason: "Helps save costs by processing only new or changed data, but does not inherently reduce the cost of compute resources used during execution." },
+        { label: "Job Timeout", reason: "Manages how long a job can run before termination — not directly related to cost optimization through resource utilization." },
+        { label: "Job Delay", reason: "Scheduling during non-peak hours might incidentally reduce costs, but doesn't leverage any specific AWS Glue feature designed for cost savings like 'FLEX'." }
+      ]
+    }
+  },
+  {
+    text: "A data engineering team is working on migrating large datasets from an on-premises file server to AWS. Post-migration, they also need to ensure regular, ongoing data transfers between the on-premises server and Amazon S3 for incremental changes.\n\nWhich AWS service should the team use to facilitate this data transfer with the ability to schedule periodic syncs and ensure data is kept current in both locations?",
+    options: [
+      "Use AWS DataSync to automate data transfer between the on-premises file server and Amazon S3, with scheduling capabilities.",
+      "Implement AWS Transfer Family to manage the transfer of files to and from Amazon S3 and the on-premises server.",
+      "Configure an AWS Storage Gateway file gateway for real-time data transfer between on-premises environments and AWS storage services.",
+      "Utilize Amazon S3 Transfer Acceleration to expedite the data transfer process from on-premises servers to Amazon S3."
+    ],
+    correct: 0,
+    feedback: {
+      explanation: "AWS DataSync is a data transfer service specifically designed to simplify and accelerate moving large volumes of data between on-premises storage systems and AWS storage services. It provides the ability to schedule periodic or one-time sync tasks, handles incremental changes, and can be used for both initial migrations and ongoing replication tasks.",
+      wrong: [
+        { label: "AWS Transfer Family", reason: "Facilitates secure file transfers using SFTP/FTPS/FTP but does not offer the same level of automation for handling ongoing data synchronization as DataSync." },
+        { label: "AWS Storage Gateway", reason: "Better suited for scenarios where on-premises applications need cloud-backed storage. For large-scale migrations and scheduled transfers, DataSync is more appropriate." },
+        { label: "S3 Transfer Acceleration", reason: "Ideal for speeding up transfers over long distances but doesn't provide orchestration and automation for scheduled, ongoing data transfers." }
+      ]
+    }
+  },
+  {
+    text: "An enterprise is looking to automate its data processing workflows on AWS. Whenever a .csv file is uploaded to a specific Amazon S3 bucket, they want a serverless process to convert the file into Apache Parquet format. The goal is to minimize manual intervention and ensure that the process is triggered only by the upload of .csv files.\n\nWhat is the most efficient method for the data engineer to set up an AWS Lambda function that responds exclusively to the uploading of .csv files into an S3 bucket?",
+    options: [
+      "Set up an S3 event notification for s3:ObjectCreated:Put events, applying a suffix filter for .csv files and designating the Lambda function's ARN as the direct trigger.",
+      "Configure an S3 Lifecycle policy to invoke the Lambda function for .csv files added to the bucket.",
+      "Establish an Amazon EventBridge rule to trigger the Lambda function on any S3 put action, with a specific filter for .csv file prefixes.",
+      "Implement an AWS Step Functions state machine that starts when a .csv file is uploaded to S3, and invoke the Lambda function as the initial step."
+    ],
+    correct: 0,
+    feedback: {
+      explanation: "Amazon S3 event notifications can be configured to respond to specific events such as the creation of a new object. By setting a suffix filter for .csv files, the S3 bucket will only invoke the Lambda function when a .csv file is uploaded — ensuring the transformation process is triggered automatically with the least operational overhead.",
+      wrong: [
+        { label: "S3 Lifecycle policy", reason: "Lifecycle policies are used for managing objects' lifecycles (archiving, deletion), not for triggering processing functions upon file upload." },
+        { label: "Amazon EventBridge rule", reason: "EventBridge can monitor S3 activity, but it is not as direct or straightforward for triggering Lambda upon specific file uploads as S3 event notifications." },
+        { label: "AWS Step Functions", reason: "A workflow service that could orchestrate the process, but it's more complex and introduces additional overhead compared to direct S3 event notifications." }
+      ]
+    }
+  },
+  {
+    text: "A marketing analyst needs to combine customer data from several databases for a one-time comprehensive report. The data resides in Amazon DynamoDB, Amazon RDS, Amazon Redshift, and Amazon S3.\n\nWhich approach should the analyst use to join and analyze this data in the most cost-effective way for this one-time task?",
+    options: [
+      "Create an AWS Glue ETL job to consolidate data from all sources into Amazon S3 and analyze it using Amazon Athena.",
+      "Create an Amazon EMR cluster with Apache Spark to read and join data from the various sources.",
+      "Use Redshift Spectrum to execute queries across DynamoDB, RDS, Redshift, and S3 data.",
+      "Use Amazon Athena Federated Query to join and analyze data from DynamoDB, RDS, Redshift, and S3."
+    ],
+    correct: 3,
+    feedback: {
+      explanation: "Amazon Athena Federated Query allows directly running SQL queries across multiple data sources without the need to move or replicate data. This is cost-effective for a one-time analysis job as it eliminates data transfer overhead. Athena's pay-per-query model and serverless nature also contribute to cost savings for ad-hoc or one-time analytical tasks.",
+      wrong: [
+        { label: "AWS Glue ETL", reason: "Viable but consolidating data from multiple sources into S3 introduces additional steps and potential costs for data movement — less efficient for a one-time task." },
+        { label: "Amazon EMR with Spark", reason: "More resource-intensive and requires provisioning and managing a cluster — typically more suited for ongoing, large-scale processing rather than one-time queries." },
+        { label: "Redshift Spectrum", reason: "Allows querying data in S3 from Redshift, but doesn't natively support DynamoDB and RDS. Additionally, managing a Redshift cluster may incur higher costs." }
+      ]
+    }
+  },
+  {
+    text: "A research institute plans to migrate a large dataset from their on-premises data center to AWS. The dataset is stored on a Network Attached Storage (NAS) system and needs to be transferred securely and efficiently, with minimal downtime to ongoing research activities.\n\nWhich AWS service should the institute use for the migration of their on-premises dataset to AWS?",
+    options: [
+      "Use AWS DataSync to automate the transfer of data from the NAS system to AWS.",
+      "Deploy AWS Storage Gateway to synchronize the NAS system data to Amazon S3.",
+      "Create an AWS Direct Connect connection to transfer data to AWS.",
+      "Configure an AWS Snowball device to physically transport the data to AWS."
+    ],
+    correct: 0,
+    feedback: {
+      explanation: "AWS DataSync is an online data transfer service that simplifies, automates, and accelerates moving data between on-premises storage systems and AWS storage services. It can securely and efficiently transfer large datasets from a NAS system to AWS (Amazon S3 or Amazon EFS), and can handle transfers over the internet or AWS Direct Connect, ensuring minimal downtime.",
+      wrong: [
+        { label: "AWS Storage Gateway", reason: "Typically used for integration with existing on-premises environments for backup and archival, rather than full-scale migration of large datasets." },
+        { label: "AWS Direct Connect", reason: "Provides a dedicated network connection but does not by itself transfer data. More suitable for continuous, regular data transfer needs rather than a one-time migration." },
+        { label: "AWS Snowball", reason: "A physical data transport solution suitable for extremely large amounts of data. However, it involves physical shipping of devices and could be more disruptive to ongoing activities." }
+      ]
+    }
+  },
+  {
+    text: "A retail company receives a daily .xls file with customer data, which is uploaded to Amazon S3. The file size is about 2 GB. A data engineer is tasked with combining the customer first name and last name fields and then identifying the total number of unique customer entries in the file.\n\nWhich AWS service or feature should the data engineer use to determine the count of distinct customers with minimal operational effort?",
+    options: [
+      "Utilize AWS Lambda with Amazon S3 trigger to process the file and calculate the number of distinct customer names.",
+      "Use Amazon Athena to run a SQL query that concatenates the names and counts distinct entries after converting the file to CSV format.",
+      "Employ Amazon S3 Select to perform the concatenation and distinct count directly on the S3 file.",
+      "Set up an AWS Glue DataBrew job to concatenate the fields and use the COUNT_DISTINCT function to find the number of unique customers."
+    ],
+    correct: 3,
+    feedback: {
+      explanation: "AWS Glue DataBrew is a visual data preparation tool that allows data engineers to clean and normalize data without writing code. DataBrew can directly access data stored in S3, and with its recipe feature, the data engineer can easily create transformations such as concatenating columns and calculating distinct values — all without managing servers.",
+      wrong: [
+        { label: "AWS Lambda", reason: "Lambda has a payload limit that might not be suitable for a 2 GB file. Additionally, Lambda would require custom code to handle the .xls format, increasing operational effort." },
+        { label: "Amazon Athena", reason: "Athena does not natively support .xls files, so the file would first need to be converted to a supported format like CSV, adding extra steps." },
+        { label: "Amazon S3 Select", reason: "Has limitations regarding file size and operation complexity. It also doesn't support .xls files directly, requiring a format conversion." }
+      ]
+    }
+  },
+  {
+    text: "A biotech firm is streaming complex genomic sequencing data in real-time through Amazon Kinesis Data Streams. This high-velocity data must be processed and then stored in an Amazon Redshift Serverless data warehouse for immediate and subsequent analysis. The data engineering team needs a streamlined process that allows for analysis of this data as it streams in, as well as aggregation of data received over the last 24 hours.\n\nWhat is the most efficient method for the data engineering team to ensure that the streaming data is processed and ready for analytical queries in Amazon Redshift Serverless with minimal management effort?",
+    options: [
+      "Implement Amazon Redshift's real-time streaming data feature to directly ingest and query data from the Kinesis data stream.",
+      "Configure an AWS Lambda function to process the Kinesis data stream and load it into Amazon Redshift Serverless.",
+      "Set up Amazon Kinesis Data Firehose to deliver the streaming data directly into Amazon Redshift Serverless.",
+      "Deploy Amazon MSK (Managed Streaming for Apache Kafka) as an intermediate buffer before loading data into Amazon Redshift Serverless."
+    ],
+    correct: 0,
+    feedback: {
+      explanation: "Amazon Redshift provides a feature for real-time ingestion of streaming data, allowing direct analysis of data as it arrives. This feature simplifies the architecture needed for real-time analytics by removing the necessity for additional data processing layers or storage services — meeting the need for immediate and ongoing analytics with the least operational overhead.",
+      wrong: [
+        { label: "AWS Lambda", reason: "Can process streaming data and interact with Redshift, but managing Lambda functions for potentially large volumes of streaming data introduces more complexity and operational effort." },
+        { label: "Kinesis Data Firehose", reason: "Can capture, transform, and load streaming data, but inherently involves some latency due to batching of data before loading it into Redshift — may not meet near real-time requirements." },
+        { label: "Amazon MSK", reason: "Using MSK as a buffer before loading data into Redshift Serverless adds an additional layer of complexity and operational management, unnecessary when Redshift can ingest streaming data directly." }
+      ]
+    }
+  },
+  {
+    text: "A digital media company has a vast collection of images stored in an Amazon S3 bucket. They require a dynamic solution that allows them to deliver resized images to their users on-the-fly, based on the specific size requested in the user's application. The solution must transform the images without storing multiple variants and should be integrated directly within the S3 object retrieval flow.\n\nWhich AWS service or feature should the company use to resize images dynamically when they are requested from the S3 bucket?",
+    options: [
+      "Implement AWS Lambda@Edge with Amazon CloudFront to resize images upon retrieval at the edge locations.",
+      "Use Amazon S3 Object Lambda to apply image resizing operations during the data retrieval from S3.",
+      "Set up an Amazon API Gateway with AWS Lambda to handle image resizing and serve the resized images from S3.",
+      "Configure Amazon S3 Event Notifications to trigger an AWS Lambda function for resizing upon each image retrieval request."
+    ],
+    correct: 1,
+    feedback: {
+      explanation: "Amazon S3 Object Lambda allows you to add custom code to S3 GET requests to modify and process data as it is returned to an application. By using S3 Object Lambda, the company can apply image resizing logic on-the-fly based on dimensions specified in the user's request. This avoids storing multiple variants of each image, reducing storage costs and simplifying management.",
+      wrong: [
+        { label: "Lambda@Edge + CloudFront", reason: "Runs Lambda at edge locations in response to CloudFront events and typically involves caching resized images at the edge — not aligned with transforming directly within the S3 object retrieval flow." },
+        { label: "API Gateway + Lambda", reason: "Requires setting up an API endpoint that triggers Lambda for each request, adding complexity in configuration and management rather than leveraging S3's built-in capabilities." },
+        { label: "S3 Event Notifications", reason: "Designed to respond to changes in S3 objects (creations, deletions, updates), not direct retrieval requests. Not suitable for on-the-fly transformations during data retrieval." }
+      ]
+    }
+  },
+  {
+    text: "A multinational corporation has separate AWS accounts for operational workloads and compliance monitoring. The operational account generates application logs stored in Amazon CloudWatch Logs. The compliance team, using a different AWS account, needs to analyze these logs using Amazon Kinesis Data Streams for real-time processing and alerting.\n\nWhich approach should the corporation take to stream application logs from the operational AWS account to the compliance team's Kinesis Data Stream in their separate AWS account?",
+    options: [
+      "Configure a Kinesis Data Stream in the operational account and grant the compliance account's IAM role cross-account access to this stream for data ingestion.",
+      "Configure a Kinesis Data Stream in the compliance account, then establish an IAM role with a trust policy in the operational account to push logs to this stream.",
+      "Configure a Kinesis Data Stream in the operational account and use AWS STS to assume a role in the compliance account for streaming logs.",
+      "Configure a Kinesis Data Stream in the compliance account, then create an IAM role in the operational account with permissions to access and write to this stream."
+    ],
+    correct: 3,
+    feedback: {
+      explanation: "This solution involves creating the destination Kinesis Data Stream in the compliance account (where log analysis will occur), then setting up an IAM role in the operational account with the necessary permissions to write to the Kinesis Data Stream in the compliance account. This enables secure transfer of logs across accounts and aligns with best practices for cross-account access in AWS.",
+      wrong: [
+        { label: "Stream in operational account", reason: "Places the destination stream in the operational account, which isn't optimal for the compliance team that needs to process logs in their own account." },
+        { label: "Trust policy in operational account", reason: "Similar to the correct answer, but incorrectly implies the trust policy should be set up in the operational account. The trust relationship is typically established in the account owning the resource (the compliance account)." },
+        { label: "STS to assume role + stream in operational", reason: "Suggests streaming logs to a data stream in the operational account, which doesn't meet the requirement of delivering logs to the compliance account for analysis." }
+      ]
+    }
+  },
+  {
+    text: "A logistics company stores large datasets of shipping records in various formats in Amazon S3. They need to clean, transform, and consolidate this data into a structured format for analysis and reporting. The process should be automated and scalable to handle increasing data volumes.\n\nWhat AWS service should the data engineering team use to efficiently perform ETL operations on these datasets?",
+    options: [
+      "Deploy Amazon Redshift Spectrum to perform ETL operations directly on the data stored in S3.",
+      "Use AWS Glue, a serverless data integration service, to perform ETL operations on the S3 datasets.",
+      "Configure Amazon EMR to run custom ETL scripts on the data stored in S3.",
+      "Set up an AWS Lambda function to trigger ETL processes on the data in S3 upon file upload."
+    ],
+    correct: 1,
+    feedback: {
+      explanation: "AWS Glue is a fully managed, serverless ETL service that is ideal for transforming and preparing large datasets for analysis. It can automate the process of cataloging, cleaning, enriching, and moving data reliably between various data stores. Its serverless nature means the company can scale ETL operations without managing any infrastructure.",
+      wrong: [
+        { label: "Redshift Spectrum", reason: "Allows querying and analyzing data in S3 using Redshift, but is not primarily an ETL tool. More suited for running complex queries than performing transformation and loading processes." },
+        { label: "Amazon EMR", reason: "Can be used for ETL processes but involves managing clusters and is not as straightforward as AWS Glue. Requires more operational management." },
+        { label: "AWS Lambda", reason: "Useful for smaller, event-driven processing tasks but may not be practical for large-scale ETL operations with complex transformations and large datasets." }
+      ]
+    }
+  },
+  {
+    text: "An e-commerce company operates a real-time analytics system that processes varying data formats from customer interactions, inventory levels, and sales transactions. This includes structured data from relational databases and semi-structured data from web traffic logs. The system must accommodate schema changes, particularly for the web logs. The processed data must be available in Amazon S3 within a tight SLA of 15 minutes.\n\nWhich service should the data engineer choose to automate the detection and processing of these varied data schemas and ensure rapid ETL to Amazon S3?",
+    options: [
+      "Use AWS Data Pipeline to orchestrate the data workflow and use AWS Lambda functions for schema detection and data processing tasks.",
+      "Use AWS Glue with its schema detection feature to handle the ETL process, automatically accommodating schema changes.",
+      "Use Amazon Kinesis Data Analytics for schema detection on streaming data, and use Kinesis Data Firehose for loading into S3.",
+      "Use AWS DMS (Database Migration Service) for ongoing replication with schema conversion and continuous data loading to S3."
+    ],
+    correct: 1,
+    feedback: {
+      explanation: "AWS Glue is a fully managed ETL service that provides a schema detection feature capable of handling both structured and semi-structured data. It's designed to automatically detect and adapt to changes in schema. Glue can process large volumes of data efficiently and load it into Amazon S3, meeting stringent SLAs while managing underlying resources automatically.",
+      wrong: [
+        { label: "AWS Data Pipeline + Lambda", reason: "Using them together for schema detection and ETL would require custom coding and could introduce delays, likely exceeding the 15-minute SLA." },
+        { label: "Kinesis Data Analytics + Firehose", reason: "Ideal for processing streaming data, but may not be most efficient for batch processing and handling data from a variety of sources such as relational databases and web logs." },
+        { label: "AWS DMS", reason: "Excels at migrating databases and ongoing replication, but not primarily designed for real-time ETL tasks or processing semi-structured web logs." }
+      ]
+    }
+  },
+  {
+    text: "A research institution is transitioning their on-premises data analytics platform, which includes Apache Hadoop clusters and a comprehensive data catalog managed in an Apache Hive metastore, to the AWS cloud. They are adopting Amazon EMR for their Hadoop workloads and require a serverless, cost-effective solution to migrate and manage their existing data catalog.\n\nWhich solution should the institution implement to migrate their Hive metastore to AWS while ensuring a serverless and cost-effective data catalog management?",
+    options: [
+      "Migrate the Hive metastore to Amazon RDS with AWS Database Migration Service (DMS), then connect the RDS instance to Amazon EMR clusters.",
+      "Set up an Amazon EMR cluster with a configured Hive metastore, migrate the on-premises metastore to EMR, and utilize AWS Glue Data Catalog for catalog synchronization.",
+      "Use AWS Glue Data Catalog to import the existing Hive metastore, making it the centralized metadata repository, and integrate it with Amazon EMR.",
+      "Implement Amazon Athena to reconstruct the data catalog from the Hive metastore data stored in Amazon S3, integrating it with EMR for analytics."
+    ],
+    correct: 2,
+    feedback: {
+      explanation: "AWS Glue Data Catalog offers a serverless metadata repository service that can replace an Apache Hive metastore. It integrates seamlessly with Amazon EMR, allowing the institution to maintain a unified data catalog. By importing their existing Hive metastore into AWS Glue Data Catalog, they can centralize and manage metadata efficiently without additional servers or management overhead.",
+      wrong: [
+        { label: "Amazon RDS + DMS", reason: "Using Amazon RDS for the Hive metastore does not provide a serverless solution and could incur higher costs and operational overhead compared to AWS Glue Data Catalog." },
+        { label: "EMR Hive metastore + Glue sync", reason: "Configuring a Hive metastore directly on Amazon EMR involves managing the cluster's lifecycle, contradicting the requirement for a serverless solution." },
+        { label: "Amazon Athena", reason: "A serverless interactive query service, but not used for managing data catalogs or migrating Hive metastores. Would add unnecessary complexity." }
+      ]
+    }
+  },
+  {
+    text: "A digital media company processes large volumes of image and video files daily. These files are stored in an Amazon S3 bucket. The company needs to analyze metadata extracted from these files (such as file size, type, creation date) and store this information for quick retrieval and analysis. The solution should automatically handle new files as they are uploaded and be scalable to handle increasing data volumes.\n\nWhich AWS service should the company implement to extract, store, and manage the metadata efficiently?",
+    options: [
+      "Use AWS Glue to run ETL jobs on new files in S3, extract metadata, and store it in Amazon RDS for querying.",
+      "Configure Amazon S3 Event Notifications to trigger AWS Lambda functions for metadata extraction and storage in Amazon DynamoDB.",
+      "Implement Amazon Kinesis Data Firehose to capture file metadata and load it into Amazon Redshift for analysis.",
+      "Utilize Amazon Athena to query S3 metadata directly and store the query results in Amazon ElastiCache for quick access."
+    ],
+    correct: 1,
+    feedback: {
+      explanation: "Amazon S3 Event Notifications can trigger AWS Lambda functions to process new files and extract metadata. AWS Lambda offers serverless compute, handling varying loads without manual scaling. Storing the extracted metadata in Amazon DynamoDB provides fast, low-latency access suitable for quick retrieval and analysis. This end-to-end solution requires minimal management and is scalable.",
+      wrong: [
+        { label: "AWS Glue + Amazon RDS", reason: "AWS Glue is capable of ETL operations, but using Amazon RDS for metadata storage might not be the most efficient solution for the high-velocity and volume of media file data." },
+        { label: "Kinesis Data Firehose + Redshift", reason: "Firehose is more suited for streaming data rather than file-based metadata extraction. Amazon Redshift may be more complex and costly for storing and retrieving simple metadata." },
+        { label: "Amazon Athena + ElastiCache", reason: "Athena is used for querying data, not for extracting and managing file metadata. Storing Athena query results in ElastiCache is not a conventional approach for metadata management." }
+      ]
+    }
+  },
+  {
+    text: "A market research firm collects extensive survey data in .csv format, stored with numerous columns. The data analysts primarily focus on a subset of columns for most of their queries. The firm needs an efficient way to ingest this data into their Amazon S3 data lake to facilitate cost-effective querying with Amazon Athena, especially given that full file scans are rare.\n\nWhich method should the data engineer use to ingest the survey data into the S3 data lake to optimize for Athena querying and cost efficiency?",
+    options: [
+      "Utilize AWS Glue PySpark job to convert the .csv files into .orc format before ingesting them into the data lake.",
+      "Implement an AWS Glue ETL job to transform the .csv files into JSON format, focusing on the columns most frequently queried.",
+      "Configure an AWS Glue ETL job to process the .csv files and store them in the data lake in Apache Parquet format.",
+      "Use AWS Lambda to parse the .csv files and reformat them into a normalized Amazon Redshift database for Athena querying."
+    ],
+    correct: 2,
+    feedback: {
+      explanation: "Apache Parquet is a columnar storage file format optimized for querying with services like Amazon Athena. It allows for efficient compression and encoding schemes, leading to cost savings in both storage and query execution. Since analysts primarily query only a few columns at a time, Athena queries will scan only the necessary columns, reducing the amount of data processed.",
+      wrong: [
+        { label: "ORC format", reason: "ORC is also a columnar format offering similar benefits, but Parquet is generally preferred for its better integration and performance with Amazon Athena, making it more cost-effective for this use case." },
+        { label: "JSON format", reason: "JSON is not a columnar format and is less efficient for the type of querying described. Querying JSON data typically requires more data to be scanned compared to Parquet." },
+        { label: "AWS Lambda + Redshift", reason: "Introduces unnecessary complexity and cost. Amazon Redshift is powerful but overkill for this scenario, and Lambda for this task would require custom scripting." }
+      ]
+    }
+  },
+  {
+    text: "A financial services company needs to optimize query costs and performance for their extensive transaction logs stored in Amazon S3. The logs are currently in .csv format but are mostly queried for specific columns using Amazon Athena.\n\nWhich method should be used to store these logs in S3 to improve Athena query efficiency and reduce costs?",
+    options: [
+      "Use AWS Glue to transform .csv logs into XML format for optimized Amazon Athena querying.",
+      "Convert .csv files to Apache Parquet format using AWS Glue and store in S3 for efficient columnar querying.",
+      "Store .csv logs in Amazon RDS and query with Athena using a JDBC connection.",
+      "Replicate .csv logs to Amazon DynamoDB for querying with Amazon Athena."
+    ],
+    correct: 1,
+    feedback: {
+      explanation: "Apache Parquet is a columnar storage file format optimized for analytics querying, particularly with Amazon Athena. It allows efficient storage and retrieval by enabling queries to scan only the necessary columns rather than entire rows. AWS Glue can automate the conversion of .csv files to Parquet and store them in S3, making this process efficient and scalable.",
+      wrong: [
+        { label: "XML format", reason: "XML is not a columnar format and is generally less efficient for query performance compared to Parquet, especially in analytics scenarios. It typically results in larger file sizes and higher query costs." },
+        { label: "Amazon RDS + JDBC", reason: "Amazon Athena does not query data directly from Amazon RDS using JDBC. Athena is designed to query data in S3." },
+        { label: "Amazon DynamoDB", reason: "DynamoDB is a NoSQL database service not typically used with Athena, which is designed for querying data in Amazon S3. This approach would add unnecessary complexity." }
+      ]
+    }
+  },
+  {
+    text: "A digital marketing firm needs to analyze clickstream data in real-time. The data is streamed through Amazon Kinesis Data Streams and must be enriched by cross-referencing with a customer database hosted on an external API before being stored in Amazon S3 for future analysis.\n\nWhich combination of AWS services should be used to process and enrich the streaming data efficiently?",
+    options: [
+      "Use Amazon EC2 instances to pull data from Kinesis, enrich it, and then upload to S3.",
+      "Use Amazon EMR to consume the Kinesis stream, apply transformations, and write to S3.",
+      "Use AWS Glue to extract data from Kinesis, enrich it, and load the processed data into S3.",
+      "Use AWS Lambda to process and enrich data from Kinesis Data Streams, then store it in Amazon S3."
+    ],
+    correct: 3,
+    feedback: {
+      explanation: "AWS Lambda is an effective serverless computing service that can be directly triggered by Amazon Kinesis Data Streams. It is ideal for real-time data processing tasks such as enriching streaming data by making API calls to external services. After enrichment, Lambda can then seamlessly store the data in Amazon S3, providing a scalable, efficient, and cost-effective solution.",
+      wrong: [
+        { label: "Amazon EC2", reason: "Would require manual setup and scaling based on data load, making it less efficient than a serverless approach with additional operational overhead." },
+        { label: "Amazon EMR", reason: "Powerful but more complex and resource-intensive for real-time data enrichment tasks. More suitable for large-scale batch processing." },
+        { label: "AWS Glue", reason: "Primarily an ETL service for batch processing and may not be optimal for real-time data processing and enrichment from a Kinesis stream." }
+      ]
+    }
+  },
+  {
+    text: "A data engineering team needs to orchestrate complex ETL workflows involving multiple AWS services like Amazon EMR, Amazon Redshift, and AWS Glue. These workflows require customizable scheduling, monitoring, and dependencies management. The team seeks a scalable and managed solution to orchestrate these workflows efficiently.\n\nWhich AWS service should the team use for orchestrating their ETL workflows?",
+    options: [
+      "Implement AWS Step Functions to manage the workflow execution and dependencies between various AWS services.",
+      "Use Amazon Managed Workflows for Apache Airflow (MWAA) to create, schedule, and monitor complex ETL workflows.",
+      "Configure AWS Lambda functions with Amazon EventBridge for scheduling and orchestrating ETL processes.",
+      "Set up Amazon Data Pipeline to define data movement and transformation between different AWS services."
+    ],
+    correct: 1,
+    feedback: {
+      explanation: "Amazon Managed Workflows for Apache Airflow (MWAA) is a managed service for setting up and operating end-to-end data pipelines with Apache Airflow. It is ideal for orchestrating complex ETL workflows involving multiple AWS services. MWAA provides robust capabilities for workflow scheduling, dependency management, and monitoring within a managed environment.",
+      wrong: [
+        { label: "AWS Step Functions", reason: "More suited for coordinating components of application workflows and microservices. For complex ETL tasks requiring detailed scheduling and dependency management, MWAA is a more tailored solution." },
+        { label: "Lambda + EventBridge", reason: "Can handle specific automation and simple workflows, but lack the comprehensive ETL orchestration, scheduling, and monitoring capabilities provided by Apache Airflow." },
+        { label: "Amazon Data Pipeline", reason: "Can automate data movement and transformation, but doesn't offer the same level of flexibility, extensibility, and detailed monitoring as Apache Airflow through MWAA." }
+      ]
+    }
+  },
+  {
+    text: "An online gaming platform generates large amounts of player activity logs stored in Amazon S3 as JSON files. The platform requires a solution to process these logs nightly, aggregate player statistics, and then store the aggregated data in a format that supports efficient querying for daily reports.\n\nWhich AWS solution should be implemented to process and store the aggregated player statistics for efficient daily reporting?",
+    options: [
+      "Use AWS Glue to transform the JSON logs in S3, aggregate the data, and store the results in Amazon Redshift.",
+      "Implement an AWS Lambda function to process the logs in S3, aggregate statistics, and write the data to Amazon DynamoDB.",
+      "Configure Amazon EMR to run nightly batch jobs on the S3 logs, aggregate the data, and output to Amazon Aurora.",
+      "Use AWS Data Pipeline to orchestrate the data processing in S3 and store the aggregated results in Amazon RDS."
+    ],
+    correct: 0,
+    feedback: {
+      explanation: "AWS Glue is a serverless data integration service well-suited for processing large volumes of data such as player activity logs. After transforming and aggregating the data, storing results in Amazon Redshift, a data warehousing service, allows for efficient querying and generation of daily reports. Redshift is optimized for handling large datasets and complex queries.",
+      wrong: [
+        { label: "AWS Lambda + DynamoDB", reason: "Lambda may be less efficient for nightly batch jobs on large volumes due to execution time limits. DynamoDB may not be as efficient for complex analytical queries typically required for reporting." },
+        { label: "Amazon EMR + Aurora", reason: "EMR alongside Aurora for nightly aggregation tasks may introduce unnecessary complexity and costs. EMR is better aligned with large-scale data processing, not typical nightly reporting." },
+        { label: "AWS Data Pipeline + RDS", reason: "Combining Data Pipeline with Amazon RDS may not provide the same level of performance and query optimization for reporting as Amazon Redshift, which is designed for data warehousing." }
+      ]
+    }
+  },
+  {
+    text: "An e-commerce company is enhancing its product recommendation engine by integrating external market research data. To refine their recommendations, the company needs to efficiently incorporate this third-party data into their existing data analysis infrastructure.\n\nWhich AWS service should the e-commerce company use to seamlessly incorporate third-party market research datasets with minimal operational effort?",
+    options: [
+      "Use AWS DataSync to transfer third-party datasets into the company's AWS environment for integration.",
+      "Import third-party datasets directly from AWS Data Exchange into the company's data analytics platform.",
+      "Stream third-party data into the company's system using Amazon Kinesis Data Streams from AWS CodeCommit.",
+      "Access and integrate third-party datasets from Amazon S3 using Amazon Kinesis Data Streams."
+    ],
+    correct: 1,
+    feedback: {
+      explanation: "AWS Data Exchange makes it easy to find, subscribe to, and use third-party data in the cloud. For the e-commerce company looking to incorporate external market research data, AWS Data Exchange offers a streamlined way to access and integrate this data, minimizing operational overhead by handling the complexities of data access and integration.",
+      wrong: [
+        { label: "AWS DataSync", reason: "A data transfer service for moving large volumes of data between on-premises storage and AWS. Not specifically designed for accessing third-party datasets from a marketplace." },
+        { label: "Kinesis + CodeCommit", reason: "Amazon Kinesis is for real-time data streaming and AWS CodeCommit is a source control service. This combination is not relevant for accessing third-party market research datasets." },
+        { label: "Amazon S3 + Kinesis", reason: "While S3 is widely used, and Kinesis can handle streaming data, this option doesn't directly address the challenge of accessing third-party market research datasets. AWS Data Exchange is more suitable." }
+      ]
+    }
+  },
+  {
+    text: "A company is looking to streamline its existing ETL processes, which currently use a combination of AWS Glue and Amazon EMR to move and transform data into their S3-based data lake. They need a solution to automate and orchestrate these ETL workflows efficiently.\n\nWhich AWS service should the company use to automate their ETL workflows with minimal manual intervention?",
+    options: [
+      "Use AWS Glue workflows for end-to-end ETL process automation.",
+      "Use AWS Step Functions to manage and orchestrate ETL tasks.",
+      "Use AWS Lambda to trigger ETL processes based on events.",
+      "Use Amazon Managed Workflows for Apache Airflow (Amazon MWAA) for ETL orchestration."
+    ],
+    correct: 0,
+    feedback: {
+      explanation: "AWS Glue workflows are designed to automate and orchestrate multiple ETL jobs. They provide a managed and integrated environment specifically built for ETL processes, allowing the company to create complex multi-job workflows including triggers, data sources, and targets — all within the AWS Glue service. This eliminates the need for additional infrastructure management.",
+      wrong: [
+        { label: "AWS Step Functions", reason: "Can orchestrate workflows across various AWS services, but requires more setup and management compared to AWS Glue workflows. More general-purpose and not specialized for ETL." },
+        { label: "AWS Lambda", reason: "Lambda is not inherently an orchestration service. Requires additional infrastructure to manage the state and sequence of ETL jobs, leading to increased operational effort." },
+        { label: "Amazon MWAA", reason: "A complex tool ideal for users already familiar with Apache Airflow. If ETL processes are already built within AWS Glue and EMR, migrating to MWAA might add unnecessary overhead." }
+      ]
+    }
+  },
+  {
+    text: "A business specializing in big data analytics is transitioning its data processing from an on-site data center to AWS. Their current setup involves heavy use of Apache Pig, Apache Oozie, Apache Spark, Apache HBase, and Apache Flink, handling petabytes of data with rapid processing times. The business requires a serverless architecture and comparable processing performance.\n\nWhich AWS service should they choose to achieve serverless ETL at scale?",
+    options: [
+      "Use AWS Glue for serverless ETL operations.",
+      "Use serverless Amazon Athena for interactive query services.",
+      "Use Amazon Kinesis Data Analytics for real-time analytics.",
+      "Use Amazon S3 with S3 Select for optimized data retrieval."
+    ],
+    correct: 0,
+    feedback: {
+      explanation: "AWS Glue is a fully managed, serverless ETL service that makes it simple and cost-effective to categorize, clean, enrich, and move data. It supports a serverless architecture, is scalable to handle petabytes of data, and can natively integrate with Apache Spark, allowing for seamless migration of Spark jobs.",
+      wrong: [
+        { label: "Amazon Athena", reason: "A serverless interactive query service, but not an ETL service. Doesn't replace the full suite of ETL capabilities or support frameworks like Apache Pig and Apache Oozie." },
+        { label: "Kinesis Data Analytics", reason: "Suitable for real-time analytics on streaming data but doesn't offer a comprehensive ETL solution for batch processing or support all the specific technologies currently used." },
+        { label: "S3 + S3 Select", reason: "Provide data storage and optimized retrieval capabilities but don't constitute a complete ETL service or replace components like Apache Pig or Oozie." }
+      ]
+    }
+  },
+  {
+    text: "A company plans to move 10 TB of multimedia content from their local servers to AWS, with a portion of the data being updated weekly. These updates must be reflected in the Amazon S3 bucket. The multimedia content consists of large image and video files, and the company needs to automate and schedule these data transfers effectively.\n\nWhich AWS service should the company employ?",
+    options: [
+      "Deploy an AWS Storage Gateway to synchronize and manage data transfers to S3.",
+      "Use AWS Transfer for SFTP to secure and automate data transfer to S3.",
+      "Use AWS DataSync to automate and schedule the ongoing transfer of files to Amazon S3.",
+      "Set up an AWS Snowball job for periodic data transfer to Amazon S3."
+    ],
+    correct: 2,
+    feedback: {
+      explanation: "AWS DataSync is a data transfer service that facilitates moving large amounts of data online between on-premises storage and AWS. It's designed to simplify and automate the data transfer process, including scheduling recurring tasks. DataSync can handle different file formats and optimize the transfer process, ensuring only modified content is transferred, saving on bandwidth and time.",
+      wrong: [
+        { label: "AWS Storage Gateway", reason: "Connects on-premises software appliances with cloud-based storage, but is typically used for backup and archival solutions rather than transferring large datasets that are frequently updated." },
+        { label: "AWS Transfer for SFTP", reason: "Provides secure file transfers to S3 using SFTP, but doesn't offer native scheduling or automation features like DataSync for large-scale migrations and regular updates." },
+        { label: "AWS Snowball", reason: "Best suited for large-scale data transfers when network bandwidth is limited. Not designed for regular, automated transfers — each transfer requires ordering and physically shipping a Snowball device." }
+      ]
+    }
+  },
+  {
+    text: "A retail company is looking to analyze transactional data in real-time. They plan to collect streaming data using Amazon Kinesis Data Streams and process it for immediate insights using Amazon Redshift, while also ensuring compatibility with their existing BI tools. They require a solution that minimizes the need for manual intervention and operational management.\n\nWhich solution will meet the company's real-time analytics requirements with the least operational overhead?",
+    options: [
+      "Implement Kinesis Data Streams with an AWS Lambda function to process and load data into Amazon Redshift continuously.",
+      "Use Kinesis Data Firehose to deliver data from Kinesis Data Streams to Redshift, using the COPY command for automatic data loading.",
+      "Use Amazon Redshift Spectrum to query the data directly from Kinesis Data Streams without persistent storage.",
+      "Implement a batch ETL process that periodically extracts data from Kinesis Data Streams and loads it into Amazon Redshift."
+    ],
+    correct: 1,
+    feedback: {
+      explanation: "Amazon Kinesis Data Firehose provides a fully managed service that automatically loads streaming data into data stores and analytics tools. It can capture, transform, and load data into Amazon Redshift. The COPY command is used to load data efficiently into Redshift, and this setup can be configured to work automatically without manual intervention.",
+      wrong: [
+        { label: "Lambda function", reason: "Can process and load data from Kinesis into Redshift, but generally requires more setup and maintenance (writing and managing Lambda function code), increasing operational overhead." },
+        { label: "Redshift Spectrum", reason: "Used to query data in S3 and does not directly query data from Kinesis Data Streams. Meant for querying large amounts of data in storage, not for real-time analytics on streaming data." },
+        { label: "Batch ETL process", reason: "Introduces latency between data capture and availability for analysis — not aligned with real-time analytics. Also typically requires more manual setup and scheduling." }
+      ]
+    }
+  },
+  {
+    text: "A business is restructuring their data storage strategy, centralizing their diverse datasets into an Amazon S3-based data lake. During the initial data assessment, the team discovered redundant entries within their existing datasets.\n\nWhat is the most efficient method for the data team to remove dataset redundancies?",
+    options: [
+      "Use AWS Glue with built-in deduplication transformations to clean the data.",
+      "Create an AWS Lambda function with custom Python code to remove duplicates before moving data to the data lake.",
+      "Create an Amazon S3 Lifecycle policy to automatically handle data deduplication.",
+      "Use Amazon Athena to run SQL queries that identify and delete duplicate records."
+    ],
+    correct: 0,
+    feedback: {
+      explanation: "AWS Glue is a managed ETL service that provides built-in transforms, such as DropDuplicates, which can be used to remove duplicate data without the need to write custom code. This solution offers the least operational overhead as it leverages managed services and pre-built transformations.",
+      wrong: [
+        { label: "AWS Lambda + custom code", reason: "Writing custom code in Lambda for deduplication increases operational overhead due to development and maintenance. Less efficient compared to using AWS Glue's built-in capabilities." },
+        { label: "S3 Lifecycle policy", reason: "Lifecycle policies are designed to manage objects' lifecycles (archiving, deletion after a period). They do not provide functionality for data deduplication." },
+        { label: "Amazon Athena", reason: "While Athena can identify duplicate records using SQL, it is not an ETL service and doesn't inherently modify or remove data in S3. Would require additional steps to process and overwrite the original data." }
+      ]
+    }
+  },
+  {
+    text: "A fintech company is developing a real-time fraud detection system that needs to process and analyze large streams of transaction data as they occur. The system must capture, process, and analyze data in real-time to detect and alert on potentially fraudulent activities instantly.\n\nWhich AWS service is most suitable for capturing and processing this high-volume, real-time transaction data for the company's fraud detection system?",
+    options: [
+      "Implement Amazon Simple Queue Service (SQS) to manage the stream of transaction data.",
+      "Store transaction data in Amazon DynamoDB and use DynamoDB Streams for real-time processing.",
+      "Use Amazon Kinesis Data Streams to capture and process the high-volume transaction data in real-time.",
+      "Configure Amazon S3 event notifications to trigger processing of transaction data."
+    ],
+    correct: 2,
+    feedback: {
+      explanation: "Amazon Kinesis Data Streams is specifically designed for real-time data streaming and processing. It can continuously capture and store terabytes of data per hour from hundreds of thousands of sources, making it ideal for processing large streams of transaction data in real-time. It enables immediate analysis and response to potentially fraudulent activities as data is streamed.",
+      wrong: [
+        { label: "Amazon SQS", reason: "A message queuing service that can decouple and scale microservices and distributed systems, but not optimized for real-time data streaming and analytics like Kinesis Data Streams." },
+        { label: "DynamoDB Streams", reason: "Captures changes to items in a DynamoDB table but is not designed for handling high-volume, real-time streaming data from external transaction sources like Kinesis." },
+        { label: "S3 event notifications", reason: "Can respond to events like object creation, but S3 is primarily a storage service and not suited for real-time processing of streaming data with low-latency requirements." }
+      ]
+    }
+  },
+  {
+    text: "A company plans to migrate its on-premises Oracle database to Amazon Aurora PostgreSQL. They need to ensure a seamless migration of both the database schema and the data with minimal downtime. The company also requires a tool to convert the source database schema to be compatible with Amazon Aurora PostgreSQL.\n\nWhich combination of AWS services should the company use to migrate the database schema and data?",
+    options: [
+      "Implement AWS Glue for both schema conversion and data migration.",
+      "Utilize Amazon RDS for data migration and AWS Lambda for schema conversion.",
+      "Use AWS Database Migration Service (DMS) for data migration and AWS Schema Conversion Tool (SCT) for schema conversion.",
+      "Apply Amazon S3 transfer acceleration for data migration and Amazon Athena for schema conversion."
+    ],
+    correct: 2,
+    feedback: {
+      explanation: "AWS DMS is an ideal service for migrating databases with minimal downtime, supporting various source and target databases including Oracle and Amazon Aurora PostgreSQL. The AWS Schema Conversion Tool (SCT) helps convert the source database schema to be compatible with the target database, assessing the source, automatically converting the schema, and highlighting elements that require manual conversion.",
+      wrong: [
+        { label: "AWS Glue", reason: "Primarily an ETL service used for preparing and transforming data for analytics. Not specifically designed for database schema conversion or complex database migrations." },
+        { label: "Amazon RDS + Lambda", reason: "Amazon RDS is for operation and management of databases, not for migrating data between different database platforms. Lambda is not suitable for database schema conversion tasks." },
+        { label: "S3 Transfer Acceleration + Athena", reason: "S3 Transfer Acceleration speeds up file transfers to S3, not for database migrations. Amazon Athena is a query service and is not designed for schema conversion or database migrations." }
+      ]
+    }
+  },
+  {
+    text: "A large enterprise is planning to migrate several on-premises applications to AWS. Before initiating the migration, the enterprise wants to understand the dependencies and performance characteristics of its on-premises applications. They also seek an efficient method to migrate these applications with minimal downtime.\n\nWhich combination of AWS services should the enterprise use to discover application dependencies and migrate applications to AWS?",
+    options: [
+      "Use AWS Application Discovery Service to identify dependencies and AWS Application Migration Service (MGN) for the migration of applications.",
+      "Implement AWS Systems Manager for application discovery and AWS CloudFormation for orchestrating the migration process.",
+      "Use AWS Config for discovering application configurations and Amazon EC2 Image Builder for creating machine images for migration.",
+      "Apply AWS CloudTrail for monitoring application activity and AWS Elastic Beanstalk for automating the deployment of migrated applications."
+    ],
+    correct: 0,
+    feedback: {
+      explanation: "AWS Application Discovery Service is specifically designed for organizations planning a cloud migration — it helps identify IT assets and dependencies. For the actual migration, AWS Application Migration Service (MGN) provides a simplified solution for migrating on-premises workloads to AWS, automating the migration process and minimizing downtime.",
+      wrong: [
+        { label: "AWS Systems Manager + CloudFormation", reason: "Systems Manager provides visibility and control over AWS infrastructure but is not specialized in detailed discovery of application dependencies. CloudFormation automates provisioning of AWS resources but doesn't handle complexities of migrating existing on-premises applications." },
+        { label: "AWS Config + EC2 Image Builder", reason: "AWS Config tracks configurations of AWS resources (not for migration planning). EC2 Image Builder automates machine image creation but is more aligned with image deployment rather than migration." },
+        { label: "CloudTrail + Elastic Beanstalk", reason: "CloudTrail is used for governance and compliance auditing across AWS accounts, not for application dependencies. Elastic Beanstalk simplifies deployment of applications on AWS but doesn't cater to the migration process from on-premises." }
+      ]
+    }
+  }
+];
+
+// ── STATE ──
+let answered = new Array(questions.length).fill(false);
+let correctCount = 0;
+
+function buildExam() {
+  document.getElementById('total-num').textContent = questions.length;
+  const container = document.getElementById('questions-container');
+  container.innerHTML = '';
+
+  questions.forEach((q, qi) => {
+    const letters = ['A','B','C','D'];
+    const card = document.createElement('div');
+    card.className = 'q-card';
+    card.id = `q-${qi}`;
+
+    const optionsHTML = q.options.map((opt, oi) => `
+      <div class="option" id="opt-${qi}-${oi}" onclick="selectOption(${qi}, ${oi})">
+        <div class="option-letter">${letters[oi]}</div>
+        <div class="option-text">${opt}</div>
+        <div class="icon-mark"></div>
+      </div>
+    `).join('');
+
+    const wrongList = q.feedback.wrong.map(w => `
+      <p><span class="tag incorrect-tag">INCORRECTO</span><strong>${w.label}:</strong> ${w.reason}</p>
+    `).join('');
+
+    card.innerHTML = `
+      <div class="q-num">Pregunta ${qi + 1} de ${questions.length}</div>
+      <div class="q-text">${q.text.replace(/\n/g,'<br>')}</div>
+      <div class="options">${optionsHTML}</div>
+      <div class="feedback" id="fb-${qi}">
+        <div class="feedback-header" id="fb-header-${qi}"></div>
+        <div class="feedback-body">
+          <p><span class="tag correct-tag">CORRECTO</span>${q.feedback.explanation}</p>
+          ${wrongList}
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function selectOption(qi, oi) {
+  if (answered[qi]) return;
+  answered[qi] = true;
+
+  const q = questions[qi];
+  const isCorrect = oi === q.correct;
+  const letters = ['A','B','C','D'];
+
+  // Style options
+  q.options.forEach((_, idx) => {
+    const el = document.getElementById(`opt-${qi}-${idx}`);
+    el.classList.add('disabled');
+    if (idx === q.correct) {
+      el.classList.add('correct');
+      el.querySelector('.icon-mark').textContent = '✓';
+    } else if (idx === oi && !isCorrect) {
+      el.classList.add('wrong');
+      el.querySelector('.icon-mark').textContent = '✗';
+    }
+  });
+
+  // Card style
+  const card = document.getElementById(`q-${qi}`);
+  card.classList.add('answered');
+  if (isCorrect) card.classList.add('correct-card');
+
+  // Show feedback
+  const fb = document.getElementById(`fb-${qi}`);
+  const fbHeader = document.getElementById(`fb-header-${qi}`);
+  fb.classList.add('show');
+  if (isCorrect) {
+    fbHeader.className = 'feedback-header ok';
+    fbHeader.innerHTML = '✓ &nbsp; Respuesta Correcta';
+    correctCount++;
+  } else {
+    fbHeader.className = 'feedback-header fail';
+    fbHeader.innerHTML = `✗ &nbsp; Incorrecto — la respuesta correcta era <strong>${letters[q.correct]}</strong>`;
+  }
+
+  // Update score
+  document.getElementById('score-num').textContent = correctCount;
+  updateProgress();
+  checkComplete();
+}
+
+function updateProgress() {
+  const done = answered.filter(Boolean).length;
+  const pct = (done / questions.length) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+function checkComplete() {
+  const done = answered.filter(Boolean).length;
+  if (done === questions.length) {
+    const panel = document.getElementById('results-panel');
+    document.getElementById('final-correct').textContent = correctCount;
+    document.getElementById('final-total').textContent = questions.length;
+    const pct = Math.round((correctCount / questions.length) * 100);
+    document.getElementById('final-pct').textContent = `${pct}% de respuestas correctas`;
+    panel.classList.add('show');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function resetExam() {
+  answered = new Array(questions.length).fill(false);
+  correctCount = 0;
+  document.getElementById('score-num').textContent = '0';
+  document.getElementById('results-panel').classList.remove('show');
+  document.getElementById('progress-bar').style.width = '0%';
+  buildExam();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+buildExam();
+</script>
+</body>
+</html>

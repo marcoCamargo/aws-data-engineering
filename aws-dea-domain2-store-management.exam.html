@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS DEA Domain 2 – Data Store Management</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1f2937;
+    --border: #30363d;
+    --accent: #38bdf8;
+    --accent2: #7dd3fc;
+    --green: #22c55e;
+    --red: #ef4444;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --correct-bg: rgba(34,197,94,0.08);
+    --correct-border: rgba(34,197,94,0.3);
+    --wrong-bg: rgba(239,68,68,0.06);
+    --wrong-border: rgba(239,68,68,0.2);
+    --selected-bg: rgba(56,189,248,0.09);
+    --selected-border: rgba(56,189,248,0.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+  }
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+    flex-wrap: wrap;
+  }
+  .aws-badge {
+    background: var(--accent);
+    color: #0d1117;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  header h1 { font-size: 17px; font-weight: 600; color: var(--text); }
+  header .sub { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+  .score-pill {
+    margin-left: auto;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  #score-num { font-weight: 700; }
+  .progress-bar-wrap { height: 3px; background: var(--border); width: 100%; }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+  main { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+  .q-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.25s;
+  }
+  .q-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+  .q-card.answered::before { background: var(--accent); }
+  .q-card.correct-card::before { background: var(--green); }
+  .q-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .q-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .multi-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    background: rgba(56,189,248,0.12);
+    color: var(--accent);
+    border: 1px solid rgba(56,189,248,0.3);
+    padding: 2px 7px;
+    border-radius: 3px;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .q-text { font-size: 15.5px; color: var(--text); margin-bottom: 24px; line-height: 1.7; }
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    background: var(--bg);
+  }
+  .option:hover:not(.disabled) {
+    border-color: var(--accent);
+    background: var(--selected-bg);
+  }
+  .option.selected { border-color: var(--selected-border); background: var(--selected-bg); }
+  .option.correct { border-color: var(--correct-border); background: var(--correct-bg); }
+  .option.wrong { border-color: var(--wrong-border); background: var(--wrong-bg); }
+  .option.disabled { cursor: default; pointer-events: none; }
+  .option-letter {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    width: 22px; height: 22px; min-width: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    transition: all 0.18s;
+    margin-top: 1px;
+  }
+  .option.correct .option-letter { background: var(--green); border-color: var(--green); color: #fff; }
+  .option.wrong .option-letter { background: var(--red); border-color: var(--red); color: #fff; }
+  .option.selected:not(.correct):not(.wrong) .option-letter { background: var(--accent); border-color: var(--accent); color: #0d1117; }
+  .option-text { font-size: 14.5px; color: var(--text); line-height: 1.5; }
+  .icon-mark { margin-left: auto; min-width: 18px; opacity: 0; font-size: 16px; transition: opacity 0.2s; }
+  .option.correct .icon-mark, .option.wrong .icon-mark { opacity: 1; }
+
+  /* Multi-select submit button */
+  .multi-submit {
+    margin-top: 12px;
+    display: none;
+    background: var(--accent);
+    color: #0d1117;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 7px;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    letter-spacing: 0.02em;
+    transition: background 0.2s, opacity 0.2s;
+  }
+  .multi-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+  .multi-submit.visible { display: inline-block; }
+
+  .feedback { display: none; margin-top: 20px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+  .feedback.show { display: block; }
+  .feedback-header {
+    padding: 10px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .feedback-header.ok { background: rgba(34,197,94,0.12); color: var(--green); }
+  .feedback-header.fail { background: rgba(239,68,68,0.1); color: var(--red); }
+  .feedback-body { padding: 16px; background: var(--surface2); }
+  .feedback-body p { font-size: 13.5px; color: var(--muted); line-height: 1.65; margin-bottom: 8px; }
+  .feedback-body p:last-child { margin-bottom: 0; }
+  .feedback-body strong { color: var(--text); }
+  .feedback-body .tag {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin-right: 6px;
+    font-weight: 600;
+  }
+  .tag.correct-tag { background: rgba(34,197,94,0.15); color: var(--green); }
+  .tag.incorrect-tag { background: rgba(239,68,68,0.12); color: var(--red); }
+
+  #results-panel {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  #results-panel.show { display: block; }
+  #results-panel h2 { font-size: 26px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  #results-panel .final-score { font-family: 'IBM Plex Mono', monospace; font-size: 52px; font-weight: 700; color: var(--text); line-height: 1; margin: 16px 0; }
+  #results-panel .final-score span { color: var(--accent); }
+  #results-panel p { color: var(--muted); font-size: 14px; }
+  .btn-reset {
+    margin-top: 24px;
+    display: inline-block;
+    background: var(--accent);
+    color: #0d1117;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: background 0.2s;
+  }
+  .btn-reset:hover { background: var(--accent2); }
+  @media (max-width: 600px) {
+    header { padding: 14px 16px; }
+    main { padding: 20px 12px 60px; }
+    .q-card { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div><div class="aws-badge">AWS DEA-C01</div></div>
+  <div>
+    <h1>Data Store Management</h1>
+    <div class="sub">Domain 2 · Practice Exam · Marco Antonio Camargo Funez</div>
+  </div>
+  <div class="score-pill">Score: <span id="score-num">0</span> / <span id="total-num">0</span></div>
+</header>
+<div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-bar"></div></div>
+
+<main>
+  <div id="results-panel">
+    <h2>¡Examen completado!</h2>
+    <div class="final-score"><span id="final-correct">0</span> / <span id="final-total">0</span></div>
+    <p id="final-pct"></p>
+    <button class="btn-reset" onclick="resetExam()">Reiniciar examen</button>
+  </div>
+  <div id="questions-container"></div>
+</main>
+
+<script>
+const questions = [
+  {
+    text: "A data engineering team is developing a new application that requires intermittent access to a relational database. The application's usage is expected to have unpredictable peaks and valleys. The team stores the application data in Amazon S3 and needs an on-demand relational database solution that can automatically scale to match the application's workload and minimize operational management and cost.\n\nWhich AWS service should the data engineering team use to meet the application's database requirements with auto-scaling capabilities and direct integration with Amazon S3?",
+    options: [
+      "Configure Amazon RDS with a scaling policy to adjust the compute resources based on the application's workload.",
+      "Implement Amazon Redshift with automatic pause and resume based on the activity levels to optimize cost and performance.",
+      "Use Amazon Aurora Serverless with an S3 integration, enabling the database to scale automatically with the application's demand.",
+      "Set up an Amazon DynamoDB table with auto-scaling enabled and stream data from S3 using AWS Lambda functions for relational database-like operations."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "Amazon Aurora Serverless is a fully managed database service that automatically starts up, shuts down, and scales capacity up or down based on your application's needs. It's designed for applications with unpredictable workloads, and it integrates with Amazon S3, allowing easy data import/export. It suits the team's need for a relational database with minimal operational overhead and cost-efficiency.",
+      wrong: [
+        { label: "Amazon RDS with scaling policy", reason: "RDS does allow for scaling, but it does not automatically adjust compute resources in real-time in response to active connections, which means it could either under-provision or over-provision resources." },
+        { label: "Amazon Redshift", reason: "Redshift is optimized for complex analytical queries over large datasets rather than serving as an on-demand operational database." },
+        { label: "Amazon DynamoDB", reason: "DynamoDB is a NoSQL service and does not provide relational database features natively. Complex workarounds would be needed to mimic relational operations." }
+      ]
+    }
+  },
+  {
+    text: "A manufacturing company plans to migrate their on-premises data, currently stored in an SMB (Server Message Block) file share, to AWS for improved scalability and data analysis capabilities. The data migration must be efficient, secure, and minimize downtime.\n\nWhich AWS service should the company use to facilitate the transfer of their SMB file share data to the cloud?",
+    options: [
+      "Use AWS DataSync to automate and accelerate the transfer of data from the SMB file share to Amazon S3.",
+      "Implement AWS Storage Gateway with a File Gateway configuration to connect the SMB file share to AWS.",
+      "Deploy AWS Snowball Edge for large-scale data transfer from the SMB file share to AWS.",
+      "Configure AWS Direct Connect to create a dedicated network connection for data transfer from the SMB share to Amazon S3."
+    ],
+    correct: [0],
+    feedback: {
+      explanation: "AWS DataSync is a data transfer service designed to simplify and accelerate moving large amounts of data between on-premises storage systems (like SMB file shares) and AWS storage services (such as Amazon S3). It handles the transfer securely, efficiently, and with minimal operational overhead, offering features like scheduling, data validation, and bandwidth throttling.",
+      wrong: [
+        { label: "AWS Storage Gateway (File Gateway)", reason: "File Gateway is more commonly used for hybrid cloud storage scenarios rather than a complete migration. It allows on-premises applications to use cloud storage through SMB or NFS protocols." },
+        { label: "AWS Snowball Edge", reason: "A physical device suitable for situations where network conditions are not ideal for online data transfer. May not be necessary if network bandwidth is sufficient for online transfer using DataSync." },
+        { label: "AWS Direct Connect", reason: "Provides a dedicated network connection to AWS but does not by itself facilitate the data transfer process. Would typically be used in conjunction with a data transfer service like DataSync." }
+      ]
+    }
+  },
+  {
+    text: "A large financial institution plans to migrate several terabytes of critical financial data from its on-premises data center to AWS for analysis and long-term storage. The migration needs to be secure, consistent, and should have minimal impact on the institution's existing network bandwidth.\n\nWhich AWS service should the institution use to migrate this large volume of data while ensuring network security and minimal impact on existing bandwidth?",
+    options: [
+      "Use AWS Snowball to physically transfer the data to AWS.",
+      "Implement AWS Direct Connect for a dedicated network connection to AWS.",
+      "Utilize Amazon S3 Transfer Acceleration for faster data upload over the internet.",
+      "Configure a VPN connection over the internet to securely transfer the data to AWS."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "AWS Direct Connect provides a dedicated network connection between the on-premises data center and AWS, enabling the transfer of large volumes of data securely and consistently. It offers a more reliable and consistent network experience compared to internet-based connections, reducing network costs, increasing bandwidth throughput, and minimizing the impact on the institution's existing internet bandwidth.",
+      wrong: [
+        { label: "AWS Snowball", reason: "A data transport solution that involves physical shipping of data. While suitable for large data migrations, it may not be the best choice for scenarios requiring a continuous and consistent data transfer process." },
+        { label: "Amazon S3 Transfer Acceleration", reason: "Enables faster transfers over long distances but doesn't provide the same level of dedicated bandwidth and consistent network performance as AWS Direct Connect." },
+        { label: "VPN connection", reason: "A VPN can secure data transfer to AWS, but may not provide the bandwidth efficiency needed for transferring several terabytes of data. It uses the public internet, which can be less reliable and slower than Direct Connect." }
+      ]
+    }
+  },
+  {
+    text: "A media company has a workflow where high-resolution videos are uploaded to an Amazon S3 bucket. Once a video is uploaded, it needs to be processed immediately to create lower-resolution versions. The company wants to automate this process so that as soon as a video is uploaded to the S3 bucket, an AWS Lambda function is triggered to start the processing.\n\nWhich AWS service should the company use to automatically trigger the Lambda function upon video upload to the S3 bucket?",
+    options: [
+      "Use Amazon S3 Event Notifications to directly invoke the Lambda function when a new video is uploaded.",
+      "Configure Amazon CloudWatch Events to detect the S3 upload event and trigger the Lambda function.",
+      "Implement Amazon Kinesis Data Streams to capture upload events and trigger the Lambda function.",
+      "Set up AWS Step Functions to orchestrate the process, triggering the Lambda function upon S3 object upload."
+    ],
+    correct: [0],
+    feedback: {
+      explanation: "Amazon S3 Event Notifications is the most suitable service for this requirement. It can be configured to trigger a Lambda function automatically when a new object is uploaded to an S3 bucket. This direct integration between S3 and Lambda is efficient for real-time processing of new objects, making the workflow automated and seamless.",
+      wrong: [
+        { label: "Amazon CloudWatch Events", reason: "Can respond to S3 object-level operations, but it is a more indirect method compared to using S3 Event Notifications, which provide a more straightforward and immediate way to trigger Lambda functions upon object upload." },
+        { label: "Amazon Kinesis Data Streams", reason: "Primarily used for real-time data streaming and processing but is not necessary for triggering a Lambda function based on S3 object uploads. This approach would add unnecessary complexity." },
+        { label: "AWS Step Functions", reason: "A workflow service for orchestrating various AWS services. For the specific need to trigger a Lambda function upon an S3 object upload, Step Functions would be an overcomplication." }
+      ]
+    }
+  },
+  {
+    text: "A data engineering team is building a system that processes various types of events generated by different applications within their organization. The system needs to route these events to specific AWS services for processing and analysis based on the event type. The solution must be scalable and able to handle many events efficiently.\n\nWhich AWS service should the data engineering team use to route these events to the appropriate AWS services based on the type of event?",
+    options: [
+      "Use Amazon Kinesis Data Streams to filter and route the events to different AWS services.",
+      "Use Amazon EventBridge to route events to target AWS services based on rules.",
+      "Use AWS Lambda to manually parse and dispatch events to other AWS services.",
+      "Use AWS Step Functions to orchestrate the event routing process to various AWS services."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "Amazon EventBridge is an ideal choice for this scenario. It is a serverless event bus service that enables applications to communicate with each other using events. EventBridge can capture events from various sources (like applications, AWS services, and external services) and routes them to the appropriate targets based on content-based rules, supporting scalable processing of many events.",
+      wrong: [
+        { label: "Amazon Kinesis Data Streams", reason: "Effective for real-time data streaming and processing but is not primarily designed for routing events based on type or content. It lacks the built-in routing capabilities based on event patterns that EventBridge offers." },
+        { label: "AWS Lambda", reason: "Using Lambda to manually parse and route events would require more development effort and might not scale as efficiently as a dedicated event routing service like EventBridge." },
+        { label: "AWS Step Functions", reason: "A service for orchestrating microservices, workflows, and processes, but it is not optimal for event routing based on event types. More suited for coordinating complex workflows." }
+      ]
+    }
+  },
+  {
+    text: "A mobile app development company is creating an application that allows users to upload and retrieve photos. The photos will be stored in Amazon S3. The company needs to decide on the best approach to integrate the S3 service into their application for handling these photo uploads and retrievals.\n\nWhich approach should the company use to integrate Amazon S3 in their mobile application for uploading and retrieving photos?",
+    options: [
+      "Directly use the Amazon S3 API in the application code for uploading and retrieving photos.",
+      "Implement Amazon EC2 instances to act as intermediaries for S3 operations.",
+      "Set up AWS Step Functions to manage the workflow of uploading and retrieving photos from S3.",
+      "Use AWS Lambda functions triggered by Amazon API Gateway to handle photo uploads and retrievals with S3."
+    ],
+    correct: [3],
+    feedback: {
+      explanation: "Using Amazon API Gateway in conjunction with AWS Lambda provides several benefits. API Gateway acts as a front door to manage all the API calls, ensuring scalability, security, and efficiency. It allows the company to control access to their S3 operations, manage traffic, authorize requests, and handle different versions of the API. Lambda processes the upload and retrieval requests, interfacing with Amazon S3. This serverless architecture is cost-effective and scales automatically.",
+      wrong: [
+        { label: "Direct Amazon S3 API", reason: "Directly using the Amazon S3 API in the application exposes the S3 service directly to the client, which could lead to security risks and less control over the traffic and operations." },
+        { label: "Amazon EC2 intermediaries", reason: "Using EC2 instances as intermediaries introduces unnecessary complexity and cost. It requires maintaining and scaling EC2 instances, which is more resource-intensive compared to the serverless approach." },
+        { label: "AWS Step Functions", reason: "Step Functions is used to coordinate multiple AWS services into serverless workflows but is not typically used for direct interactions like file uploads and retrievals. It would add unnecessary complexity." }
+      ]
+    }
+  },
+  {
+    text: "A software development team is deploying an application on Amazon Elastic Container Service (ECS) using Fargate. The application requires persistent storage to manage stateful data. The team needs to select an appropriate storage solution that can be attached to the ECS containers.\n\nWhich storage option should the team use for persistent storage with their ECS containers on Fargate?",
+    options: [
+      "Attach Amazon Elastic Block Store (EBS) volumes directly to the ECS containers.",
+      "Use Amazon Elastic File System (EFS) volumes with the ECS containers.",
+      "Use Amazon S3 buckets by mounting them directly onto the ECS containers.",
+      "Implement instance store volumes provided by the underlying EC2 instances of Fargate."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "Amazon Elastic File System (EFS) is the suitable choice for providing persistent storage to containers running on Amazon ECS using Fargate. EFS is a fully managed, scalable file storage that can be attached to multiple ECS containers, allowing them to share the same file system. This is ideal for stateful applications that require shared or persistent storage across tasks or services in ECS.",
+      wrong: [
+        { label: "Amazon EBS", reason: "EBS volumes cannot be directly attached to ECS containers, especially in the Fargate launch type. EBS is primarily used with EC2 instances and is not suitable for container-based architectures where containers might be rescheduled on different underlying infrastructure." },
+        { label: "Amazon S3 buckets", reason: "Amazon S3 is an object storage service and cannot be directly mounted onto ECS containers as a file system. While S3 can be used for storing and retrieving data, it is not designed to serve as attached storage for containers." },
+        { label: "Instance store volumes", reason: "Fargate does not provide direct access to the underlying EC2 instance store volumes, as it abstracts the underlying infrastructure management. Instance store volumes are ephemeral and tied to the lifecycle of an EC2 instance." }
+      ]
+    }
+  },
+  {
+    text: "A software company is developing a web-based application that will be deployed on multiple Amazon EC2 instances in an Auto Scaling group. The application requires a shared file system that can be accessed concurrently by all EC2 instances for reading and writing data. The file system must also support high availability and scalability.\n\nWhich AWS storage service should the software company use to meet these requirements?",
+    options: [
+      "Use Amazon S3 to provide a scalable object storage solution.",
+      "Implement Amazon Elastic Block Store (EBS) with shared volumes.",
+      "Use Amazon Elastic File System (EFS) for a scalable, shared file storage system.",
+      "Deploy Amazon EC2 instance store volumes for temporary, high-performance storage."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "Amazon EFS is the optimal choice. EFS provides a fully managed elastic NFS file system designed to be highly available and scalable, making it suitable for scenarios where multiple EC2 instances need concurrent access to a shared file system. EFS is particularly well-suited for use with EC2 instances in an Auto Scaling group, as it allows all instances to read and write to the same file system simultaneously.",
+      wrong: [
+        { label: "Amazon S3", reason: "S3 is an object storage service and does not function as a traditional file system. It is not suitable for use cases requiring a shared file system with file locking and concurrent read/write capabilities." },
+        { label: "Amazon EBS with shared volumes", reason: "EBS volumes are generally used for single instance storage and do not natively support being attached to multiple EC2 instances simultaneously for a shared file system setup." },
+        { label: "EC2 instance store volumes", reason: "Instance store volumes provide temporary block-level storage for EC2 instances, tied to the lifecycle of the instance, and are not suitable for persistent storage needs or shared file access across multiple EC2 instances." }
+      ]
+    }
+  },
+  {
+    text: "A DevOps team is responsible for monitoring and troubleshooting a fleet of EC2 instances running web applications in AWS. They need an efficient way to analyze and query the log data generated by these applications, which are stored in Amazon CloudWatch Logs. The team wants to quickly identify errors and understand usage patterns through log analysis.\n\nWhich AWS service or feature should the DevOps team use for effective real-time analysis and querying of log data stored in Amazon CloudWatch Logs?",
+    options: [
+      "Implement AWS X-Ray for in-depth analysis and tracing of application logs.",
+      "Set up Amazon Athena to query log data directly from CloudWatch Logs.",
+      "Configure Amazon Elasticsearch Service for log analytics and visualization.",
+      "Use CloudWatch Logs Insights to perform queries and analyze the log data."
+    ],
+    correct: [3],
+    feedback: {
+      explanation: "CloudWatch Logs Insights is the most suitable tool for the DevOps team's requirements. It provides an interactive interface to query and analyze log data stored in CloudWatch Logs, enabling the team to execute complex queries on their log data, helping them efficiently analyze and visualize operational data. It's particularly useful for identifying trends, pinpointing errors, and extracting valuable insights.",
+      wrong: [
+        { label: "AWS X-Ray", reason: "X-Ray is more focused on providing insights into the performance of distributed applications and services, rather than log analysis. It is used for tracing requests through distributed systems, not specifically for querying and analyzing log data." },
+        { label: "Amazon Athena", reason: "Athena is more suited for querying data stored in Amazon S3 and does not offer the real-time log analytics capabilities provided by CloudWatch Logs Insights for logs stored in CloudWatch." },
+        { label: "Amazon Elasticsearch Service", reason: "Powerful for log analytics and visualization, but involves setting up and managing an Elasticsearch cluster. CloudWatch Logs Insights offers a more direct and integrated solution within the AWS ecosystem." }
+      ]
+    }
+  },
+  {
+    text: "A social media company uses an Amazon DynamoDB table to store user activity logs. The logs are only relevant for 30 days for analytical purposes. After 30 days, these logs are no longer needed and should be automatically deleted to save storage costs.\n\nWhat steps should the company take to automatically remove outdated logs from the DynamoDB table after 30 days?",
+    options: [
+      "Configure an AWS Lambda function to periodically scan the DynamoDB table and delete items older than 30 days.",
+      "Use Amazon DynamoDB Streams to trigger a deletion process for items that are 30 days old.",
+      "Implement an Amazon S3 Lifecycle policy to remove data from the DynamoDB table after 30 days.",
+      "Set up a Time To Live (TTL) attribute on the DynamoDB table and configure it to expire items after 30 days."
+    ],
+    correct: [3],
+    feedback: {
+      explanation: "Implementing a TTL (Time To Live) attribute in Amazon DynamoDB is the most efficient way to automatically delete items after a specific period. The company should add a TTL attribute to their DynamoDB table holding the expiration timestamp for each item (creation time plus 30 days). DynamoDB will then automatically delete items once the TTL value is reached, without incurring additional costs or manual intervention.",
+      wrong: [
+        { label: "AWS Lambda periodic scan", reason: "While this method could work, it introduces unnecessary complexity and operational overhead. It requires writing and maintaining a Lambda function and also incurs additional costs for Lambda invocations." },
+        { label: "DynamoDB Streams", reason: "DynamoDB Streams capture modifications to items in the table but are not designed to automatically delete items based on age. Implementing this would require additional components and is less efficient than using TTL." },
+        { label: "Amazon S3 Lifecycle policy", reason: "Amazon S3 Lifecycle policies are for managing S3 objects, not for DynamoDB items. These policies cannot be used to delete data from a DynamoDB table." }
+      ]
+    }
+  },
+  {
+    text: "A mobile application development company is using Amazon DynamoDB for its user data storage. The company requires a mechanism to track and respond to changes in the user data in real-time. They need a solution that captures modifications to DynamoDB items and triggers a process to handle these changes as they occur.\n\nWhich AWS service should the company implement to meet this requirement effectively?",
+    options: [
+      "Use AWS Lambda to periodically poll the DynamoDB table for changes.",
+      "Implement Amazon Kinesis Data Firehose to capture and process data changes in DynamoDB.",
+      "Activate DynamoDB Streams to capture changes and trigger an AWS Lambda function for real-time processing.",
+      "Configure Amazon S3 event notifications to respond to data changes in the DynamoDB table."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "DynamoDB Streams captures a time-ordered sequence of item-level modifications in any DynamoDB table and stores this information for 24 hours. This stream of data can then be used to trigger an AWS Lambda function automatically whenever there are changes (such as inserts, updates, or deletes) to the table, allowing for efficient and real-time processing of data changes.",
+      wrong: [
+        { label: "AWS Lambda periodic poll", reason: "Periodically polling the DynamoDB table for changes is less efficient and may introduce latency in response to data changes. It is also a more resource-intensive approach compared to using DynamoDB Streams." },
+        { label: "Amazon Kinesis Data Firehose", reason: "Primarily used for loading streaming data into AWS data stores and does not have a direct integration with DynamoDB for capturing table changes." },
+        { label: "Amazon S3 event notifications", reason: "Amazon S3 event notifications are used to respond to changes in S3 buckets, not DynamoDB tables. This option is not applicable for tracking changes in a DynamoDB table." }
+      ]
+    }
+  },
+  {
+    text: "A photography studio stores its high-resolution image files in an Amazon S3 bucket. Recently, they encountered issues with accidental overwrites of important files. The studio requires a solution to prevent the overwriting and accidental deletion of their images while ensuring that the latest version of a file is readily accessible.\n\nWhich single feature should the photography studio enable on their S3 bucket to address this issue effectively?",
+    options: [
+      "Implement S3 Lifecycle policies to archive older versions of files to S3 Glacier.",
+      "Activate S3 Versioning to maintain multiple versions of each file.",
+      "Enable S3 Object Lock in compliance mode for strict WORM (Write Once, Read Many) protection.",
+      "Configure S3 Intelligent-Tiering to manage the storage of the files efficiently."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "S3 Versioning is the most suitable solution. It prevents data loss due to overwrites and deletions by keeping multiple versions of an object. When a file is overwritten or deleted, the older version is preserved, allowing for easy recovery. Versioning ensures that all versions of a file are available, with the latest version being readily accessible.",
+      wrong: [
+        { label: "S3 Lifecycle policies", reason: "While S3 Lifecycle policies can manage the storage of files and archive older versions, they do not prevent overwriting or accidental deletion of the current version." },
+        { label: "S3 Object Lock (compliance mode)", reason: "S3 Object Lock in compliance mode provides immutable storage, which is more stringent than needed for this scenario. It's typically used for regulatory requirements where data must not be altered or deleted for a certain period." },
+        { label: "S3 Intelligent-Tiering", reason: "Designed for cost optimization by automatically moving data between different access tiers. It does not address the issue of preventing file overwrites or accidental deletion." }
+      ]
+    }
+  },
+  {
+    text: "A university's research department is storing large datasets on Amazon S3 for various projects. They have two distinct types of data:\n1. \"Project Alpha\" data is accessed frequently for the first 30 days but will be rarely accessed thereafter. However, when needed, the data must be immediately available.\n2. \"Project Beta\" data is archival and will only be accessed for potential audits, with retrieval time being less critical.\n\nWhat combination of S3 storage classes should the research department use to store \"Project Alpha\" and \"Project Beta\" data most cost-effectively?",
+    options: [
+      "Use S3 Intelligent-Tiering for \"Project Alpha\" data and S3 Standard-Infrequent Access for \"Project Beta\" data.",
+      "Store \"Project Alpha\" data in S3 Standard and \"Project Beta\" data in S3 Glacier Deep Archive.",
+      "Store \"Project Alpha\" data in S3 One Zone-Infrequent Access and \"Project Beta\" data in S3 Glacier.",
+      "Use S3 Standard for both \"Project Alpha\" and \"Project Beta\" data for simplicity and consistent access."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "S3 Standard is ideal for \"Project Alpha\" data due to its high availability and immediate access, even if the data becomes infrequently accessed after the initial 30 days. For \"Project Beta\" archival data, S3 Glacier Deep Archive offers the lowest cost storage for data that is rarely accessed, and retrieval times of several hours are acceptable in this case.",
+      wrong: [
+        { label: "S3 Intelligent-Tiering + S3 Standard-IA", reason: "While Intelligent-Tiering could be suitable for Project Alpha, S3 Standard-IA is not as cost-effective as Glacier Deep Archive for archival data like Project Beta where immediate access is not necessary." },
+        { label: "S3 One Zone-IA + S3 Glacier", reason: "S3 One Zone-IA does not provide the same level of availability and resilience as S3 Standard for Project Alpha. S3 Glacier could be used for Project Beta, but Glacier Deep Archive is more cost-effective for long-term archival data." },
+        { label: "S3 Standard for both", reason: "Using S3 Standard for both projects does not optimize costs. Project Beta data, which is archival, can be stored more cost-effectively in a lower-cost storage class designed for infrequently accessed data." }
+      ]
+    }
+  },
+  {
+    text: "A gaming company is developing a high-score leaderboard for their online game, which receives bursts of high read traffic when scores are updated. The backend is powered by a relational database, which is experiencing latency under heavy load due to frequent read requests.\n\nWhich AWS service should the gaming company implement to reduce read latency and manage the read traffic more efficiently?",
+    options: [
+      "Introduce Amazon ElastiCache to cache high-score data and alleviate the read load from the database.",
+      "Use Amazon S3 to store the leaderboard scores for high availability and low-latency retrieval.",
+      "Deploy additional read replicas of the relational database to handle the increased read traffic.",
+      "Configure Amazon DynamoDB with DAX (DynamoDB Accelerator) for caching leaderboard scores."
+    ],
+    correct: [0],
+    feedback: {
+      explanation: "Amazon ElastiCache is a fully managed in-memory data store, compatible with Redis or Memcached, that provides extremely fast performance, ideal for read-heavy application workloads like gaming leaderboards. By caching frequently accessed information, ElastiCache significantly reduces the latency of read operations and decreases the direct read load on the database.",
+      wrong: [
+        { label: "Amazon S3", reason: "S3 is not optimized for low-latency read access on the scale required for real-time gaming leaderboards, especially when compared to in-memory caching solutions." },
+        { label: "Read replicas", reason: "Read replicas can help distribute the load, but they might still struggle under high traffic bursts and do not offer the same low-latency performance as an in-memory caching system." },
+        { label: "DynamoDB with DAX", reason: "DAX is specific to Amazon DynamoDB. Since the company's backend is a relational database, not DynamoDB, this solution would require migrating to DynamoDB first." }
+      ]
+    }
+  },
+  {
+    text: "A company is deploying a stateful application on Amazon EC2 that requires temporary storage for processing large datasets with maximum I/O. The application must also maintain a smaller subset of essential state data that needs to persist beyond the life of the instance.\n\nWhich combination of storage solutions should the company choose?",
+    options: [
+      "Attach Amazon EBS volumes for essential state data and use Amazon DynamoDB for temporary data.",
+      "Attach additional Amazon EBS volumes for temporary data processing and rely on the root device volume for essential state data.",
+      "Attach Amazon EC2 instance store volumes for temporary data processing and Amazon Elastic Block Store (EBS) for essential state data.",
+      "Implement a combination of Amazon EC2 instance store volumes for rapid I/O and EBS snapshots for daily backups of essential data."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "Instance store volumes provide high I/O for temporary data processing but do not offer data persistence after an EC2 instance is stopped or terminated. For essential state data that needs to be retained long-term, EBS is the appropriate choice because it persists independently of the EC2 instance's life cycle and allows for data durability and snapshot backups.",
+      wrong: [
+        { label: "EBS + DynamoDB", reason: "EBS is the correct choice for the essential state data, but DynamoDB may not be the most effective choice for the temporary data. Using a local instance store volume would provide higher I/O." },
+        { label: "EBS for both", reason: "Using EBS for both temporary processing and essential data is secure but might not be the most cost-effective approach for temporary data processing needs when compared to instance store volumes, which are included at no extra cost." },
+        { label: "Instance store + EBS snapshots", reason: "This option misunderstands the purpose of EBS snapshots, which are meant for backups and not for real-time data persistence. Snapshots are not a replacement for persistent storage." }
+      ]
+    }
+  },
+  {
+    text: "A financial services firm is experiencing rising costs associated with monthly data migrations from their on-premises Oracle database to AWS. They need a more economical method to transfer their extensive transaction records to an Amazon RDS for Oracle instance with minimal disruption to their ongoing operations.\n\nWhat AWS service should the firm utilize to achieve a cost-efficient and low-downtime migration?",
+    options: [
+      "Use AWS DataSync to schedule and automate the data transfer process.",
+      "Establish AWS Direct Connect for a dedicated network connection to AWS.",
+      "Configure an AWS Snowball job to handle the end-of-month data transfers.",
+      "Implement AWS Database Migration Service (AWS DMS) to manage ongoing data migrations."
+    ],
+    correct: [3],
+    feedback: {
+      explanation: "AWS Database Migration Service is specifically designed to facilitate the migration of databases to AWS in a simple and secure manner. AWS DMS allows for continuous data replication with minimal downtime, which is crucial for the company's operational requirements. It can handle the end-of-month batch migration workload in a cost-effective way by only running and incurring costs during the migration period.",
+      wrong: [
+        { label: "AWS DataSync", reason: "DataSync is great for transferring data between on-premises storage and AWS services, but it is not specifically tailored for database migrations and does not handle database schema conversions or other database-specific tasks." },
+        { label: "AWS Direct Connect", reason: "Provides a dedicated network connection from on-premises to AWS, which can reduce network costs for large data transfers but does not provide a migration service itself." },
+        { label: "AWS Snowball", reason: "A data transport solution not suitable for database migrations that require ongoing, incremental changes. It would introduce unnecessary complexity and potential downtime." }
+      ]
+    }
+  },
+  {
+    text: "A business analytics team is tasked with configuring a provisioned Amazon EMR cluster optimized for executing Apache Spark jobs to analyze extensive datasets. The team must ensure that the cluster operates cost-effectively without compromising on performance or reliability.\n\nTo achieve this, what two recommendations should the team follow to configure their Amazon EMR resources? (Select TWO.)",
+    options: [
+      "Configure Amazon EMR to use Amazon S3 as a data lake for durable and cost-effective storage.",
+      "Use Graviton instances for core and task nodes to leverage better price-performance.",
+      "Implement EMR Managed Scaling to automatically resize the cluster based on workload.",
+      "Select Reserved Instances for core nodes to reduce costs with long-term commitment.",
+      "Choose Spot Instances for task nodes to take advantage of lower prices for flexible workloads."
+    ],
+    correct: [0, 1],
+    feedback: {
+      explanation: "Using Amazon S3 as a data lake for Amazon EMR is a common best practice because S3 provides highly durable storage at a lower cost compared to HDFS on EMR. S3 also decouples storage from compute, allowing teams to shut down EMR clusters when not in use, thus optimizing costs. AWS Graviton instances, powered by Arm-based processors, offer a better price-performance ratio compared to traditional x86-based instances, delivering cost savings optimized for performance-intensive big data workloads.",
+      wrong: [
+        { label: "EMR Managed Scaling", reason: "While managed scaling helps adjust cluster size dynamically, this answer doesn't address the core concern of cost-optimized storage decoupling and right-sizing instances, which S3 and Graviton do more directly." },
+        { label: "Reserved Instances for core nodes", reason: "x86-based instances may not be the most cost-effective option compared to AWS Graviton instances when price-performance is considered, especially for long-running and resource-intensive workloads." },
+        { label: "Spot Instances for task nodes", reason: "While Spot Instances offer savings for fault-tolerant workloads, using them for all primary nodes (including master nodes) is not recommended due to the possibility of Spot Instance termination, which can affect cluster reliability for long-running jobs." }
+      ]
+    }
+  },
+  {
+    text: "A retail organization is developing a business intelligence platform using Amazon S3 to store their sales data and Amazon Redshift for warehousing. To efficiently perform queries on their S3-stored data using Amazon Redshift Spectrum, which two of the following practices will yield the FASTEST query performance? (Select TWO.)",
+    options: [
+      "Compress the data files using bzip2 to ensure they are between 1 GB and 5 GB after compression.",
+      "Store the data using a columnar format like Parquet or ORC.",
+      "Divide the data into numerous small files, each smaller than 128 KB.",
+      "Choose file formats that allow for multi-threaded data processing.",
+      "Partition the data in S3 based on frequently queried attributes such as date or product category."
+    ],
+    correct: [1, 4],
+    feedback: {
+      explanation: "Columnar storage formats like Parquet and ORC allow Redshift Spectrum to read only the necessary columns for a query rather than entire rows, reducing the amount of data scanned and improving performance. Partitioning data on commonly used query predicates allows Redshift Spectrum to skip over irrelevant parts of the dataset, greatly improving query performance by scanning only the relevant partitions.",
+      wrong: [
+        { label: "bzip2 compression", reason: "bzip2 is not as performant as gzip in the context of Redshift Spectrum due to its non-splittable nature. Redshift Spectrum processes data in parallel, and splittable formats can be processed more efficiently." },
+        { label: "Numerous small files (<128 KB)", reason: "Having many small files can actually degrade performance because each file incurs overhead for processing. Redshift Spectrum is optimized for larger file sizes that allow for more efficient processing." },
+        { label: "Multi-threaded file formats", reason: "File formats themselves do not enable multi-threaded processing; this is dependent on the query engine. In Redshift Spectrum, columnar formats inherently allow for parallel processing of data." }
+      ]
+    }
+  },
+  {
+    text: "A data analytics team is leveraging Amazon Redshift for their complex querying and reporting needs. To ensure optimal performance, they want to track when the query optimizer flags potential inefficiencies.\n\nWhich Amazon Redshift system view can the data engineer consult to find optimizer-generated performance alerts?",
+    options: [
+      "Examine the STL_WLM_QUERY system view to observe query execution and queueing durations.",
+      "Observe the STL_QUERYTEXT system view for the text of the SQL statements executed.",
+      "Refer to the STL_ALERT_EVENT_LOG system view to find warnings and alerts related to query optimization.",
+      "Inspect the SVL_QUERY_SUMMARY system view for summary data about query execution to pinpoint performance issues."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "The STL_ALERT_EVENT_LOG system view is specifically designed to record alerts generated by the Amazon Redshift query optimizer. It logs various alert events that might indicate performance issues, such as when a query is consuming excessive memory or when it's performing a nested loop join that could be inefficient.",
+      wrong: [
+        { label: "STL_WLM_QUERY", reason: "Provides valuable information about query execution times and whether queries are being queued, but does not directly log the alerts or warnings about query plans or optimization issues." },
+        { label: "STL_QUERYTEXT", reason: "Contains the text of each executed SQL command, useful for reviewing and debugging queries, but does not provide alerting or diagnostic information about query performance from the optimizer's perspective." },
+        { label: "SVL_QUERY_SUMMARY", reason: "Gives a summary of query execution, including elapsed time and rows processed, which can help understand overall performance but does not provide specific alerts or warnings like STL_ALERT_EVENT_LOG." }
+      ]
+    }
+  },
+  {
+    text: "A company needs to analyze high-volume streaming data for real-time insights, requiring the ability to aggregate data within a 30-minute time frame. They are looking for a highly available solution that minimizes the need for management and maintenance.\n\nWhat is the most suitable AWS service for performing these real-time analytics with the least operational effort?",
+    options: [
+      "Deploy Amazon Managed Service for Apache Flink (previously known as Amazon Kinesis Data Analytics) with SQL applications to perform windowed aggregations on the streaming data.",
+      "Deploy Amazon Kinesis Data Streams with an Amazon Kinesis Data Firehose transformation to aggregate data before storing it for analysis.",
+      "Implement an Amazon EC2 fleet with an auto-scaling policy to host a custom aggregation service that processes data from Amazon Kinesis Data Streams.",
+      "Configure an AWS Glue streaming ETL job that reads from Amazon Kinesis Data Streams and performs aggregations in real-time."
+    ],
+    correct: [0],
+    feedback: {
+      explanation: "Amazon Managed Service for Apache Flink (formerly Amazon Kinesis Data Analytics) is a managed service that enables complex analytics on streaming data using standard SQL and Apache Flink. It's designed to be highly fault-tolerant and provides built-in functions for time-based windowing operations like the required 30-minute aggregations. This managed service reduces operational overhead by managing the underlying infrastructure and scaling resources automatically.",
+      wrong: [
+        { label: "Kinesis Data Streams + Firehose", reason: "Kinesis Data Firehose is primarily for loading streaming data into AWS data stores and does not natively support complex time-based aggregations needed for real-time analytics within a 30-minute window." },
+        { label: "Amazon EC2 fleet", reason: "This approach could technically work, but it involves significant operational overhead in managing an EC2 fleet, including setup, maintenance, and scaling of the servers." },
+        { label: "AWS Glue streaming ETL", reason: "AWS Glue's primary use case is not real-time analytics. It's more suited for batch ETL jobs and data integration tasks, and may not provide the same level of fault tolerance or simplicity for real-time windowed aggregations." }
+      ]
+    }
+  },
+  {
+    text: "A growing fintech company is leveraging an Amazon Redshift cluster equipped with dense compute (DC2) nodes. To accommodate their expanding user base, the company needs to dynamically adjust both read and write capacities based on varying workloads. The data engineer has been tasked to configure the Redshift cluster to automatically add additional query processing power.\n\nWhat action should the data engineer take to enable this functionality?",
+    options: [
+      "Configure the Redshift cluster to utilize Elastic Resize for adjusting node count based on demand.",
+      "Enable elasticity at the Redshift cluster by configuring Elastic IP addresses for each node.",
+      "Activate concurrency scaling in the Redshift cluster's workload management (WLM) configuration.",
+      "Implement automatic WLM on the Redshift cluster to dynamically manage query queues."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "Concurrency scaling is a feature specific to Amazon Redshift that automatically adds additional cluster capacity when needed to handle bursts in query load. When concurrency scaling is turned on, Redshift automatically and transparently uses new clusters to provide additional compute resources, ensuring that read and write operations are scaled to meet demand without manual intervention.",
+      wrong: [
+        { label: "Elastic Resize", reason: "Elastic Resize changes the number of nodes in a Redshift cluster, which can scale the cluster's compute resources. However, it is not the same as concurrency scaling, which specifically addresses scaling read and write capacity on-demand without resizing the cluster." },
+        { label: "Elastic IP addresses", reason: "Elastic IP addresses provide a static IP address for EC2 instances, which is unrelated to the scaling of a Redshift cluster's read and write capacity." },
+        { label: "Automatic WLM", reason: "Automatic WLM dynamically manages memory and query concurrency to improve query processing. However, it does not by itself provide the additional compute resources for scaling read and write capacity on-demand like concurrency scaling does." }
+      ]
+    }
+  },
+  {
+    text: "A tech company needs to reduce costs for storing large amounts of data in Amazon S3, where access patterns are unpredictable. They require millisecond retrieval times for all data.\n\nWhich storage solution should they use?",
+    options: [
+      "Transition to S3 One Zone-Infrequent Access for all data.",
+      "Move all data to S3 Glacier for long-term storage.",
+      "Create S3 Lifecycle policies to archive data to S3 Glacier Deep Archive.",
+      "Implement S3 Intelligent-Tiering for automatic cost optimization."
+    ],
+    correct: [3],
+    feedback: {
+      explanation: "S3 Intelligent-Tiering is designed for data with unknown or unpredictable access patterns, automatically moving data to the most cost-effective access tier without performance impact. This option meets the requirement for millisecond-level retrieval times while optimizing costs, as it automatically shifts data between access tiers when access patterns change.",
+      wrong: [
+        { label: "S3 One Zone-Infrequent Access", reason: "S3 One Zone-IA offers cost savings for infrequently accessed data, but it stores data in a single Availability Zone, which might not meet the company's durability requirements or access patterns for all data." },
+        { label: "S3 Glacier", reason: "S3 Glacier is intended for archival data where retrieval times of several minutes to hours are acceptable. It does not support the required millisecond retrieval time." },
+        { label: "S3 Lifecycle policies to Glacier Deep Archive", reason: "S3 Glacier Deep Archive provides the lowest-cost storage for data archiving, but data retrieval times are on the order of hours, not milliseconds, making it unsuitable for the company's needs." }
+      ]
+    }
+  },
+  {
+    text: "A tech company is developing a mobile application that requires a flexible data model to handle user-generated content, which varies greatly in size and structure. The application expects unpredictable traffic and needs to automatically scale to accommodate peak loads. Cost-efficiency and performance are primary concerns.\n\nWhich database solution is the most appropriate for this use case?",
+    options: [
+      "Amazon RDS with its relational database capabilities to ensure ACID transactions and enable complex queries on user data.",
+      "Amazon Aurora with its relational database features and automatic scaling to provide consistent performance under variable workloads.",
+      "Amazon DynamoDB for a managed NoSQL database experience with seamless scalability and a flexible schema to handle varied user content.",
+      "A self-managed NoSQL database on Amazon EC2 instances to provide full control over the database's scalability and management."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "Amazon DynamoDB is a NoSQL database service known for its ability to handle large amounts of unstructured data. It provides seamless scalability, automatically adjusting to the incoming traffic and data volume, making it ideal for unpredictable traffic patterns. DynamoDB's flexible schema allows for handling a variety of user-generated content without predefined schema constraints.",
+      wrong: [
+        { label: "Amazon RDS", reason: "Amazon RDS is a relational database service best for structured data requiring complex queries and transactions. It may not be as cost-effective or as easily scalable as DynamoDB for unpredictable workloads with a flexible schema requirement." },
+        { label: "Amazon Aurora", reason: "Aurora is a relational database that provides some scalability benefits but still relies on a fixed schema. It doesn't inherently manage unstructured data as effectively as DynamoDB." },
+        { label: "Self-managed NoSQL on EC2", reason: "Managing a NoSQL database on Amazon EC2 instances gives full control but also adds overhead for scaling and managing the infrastructure. It is not as cost-effective or easy to manage compared to a fully managed service like DynamoDB." }
+      ]
+    }
+  },
+  {
+    text: "An airline utilizes Amazon S3 and Athena for querying daily flight metrics recorded in .csv files, with data organized by date. They seek to optimize query performance due to increasing data volume.\n\nWhat is the MOST effective solution for enhancing query efficiency?",
+    options: [
+      "Disperse S3 key prefixes randomly to maximize request throughput.",
+      "Ensure the S3 bucket holding the .csv files is in the same AWS Region where Athena is running.",
+      "Convert the .csv files to JSON, optimizing the schema based on query patterns.",
+      "Transition the .csv data to a columnar format like Apache Parquet to improve predicate pushdown efficiency."
+    ],
+    correct: [3],
+    feedback: {
+      explanation: "Converting .csv files to a columnar format like Apache Parquet is highly efficient for query performance in Athena. Parquet is optimized for query performance and reduces query costs by allowing Athena to read only the columns it needs to process the query (predicate pushdown). This also results in less data scanned per query, leading to improved performance and lower costs.",
+      wrong: [
+        { label: "Random S3 key prefixes", reason: "Randomizing S3 key prefixes can increase throughput but does not directly improve Athena query performance, especially when the data is already partitioned by date." },
+        { label: "Same AWS Region", reason: "While having the S3 bucket in the same AWS account as Athena is common practice for simplicity and security, it does not inherently improve query performance." },
+        { label: "Convert to JSON", reason: "Converting .csv files to JSON may make the data more accessible for certain types of queries but does not offer the same level of performance improvement as a columnar format. JSON is a row-oriented format that requires scanning more data than necessary for queries with specific columnar predicates." }
+      ]
+    }
+  },
+  {
+    text: "A financial services company wants to optimize the performance of its Amazon RDS for MySQL instances. The database administrators need to collect and analyze operating system-level metrics such as CPU utilization, read IOPS, write IOPS, and memory pressure to identify bottlenecks.\n\nWhich AWS service should they use to obtain these metrics for their RDS instances?",
+    options: [
+      "Enable Amazon RDS Performance Insights to monitor the database performance and analyze the database load.",
+      "Use AWS CloudWatch to monitor fundamental metrics and set alarms to notify when thresholds are breached.",
+      "Activate Amazon RDS Enhanced Monitoring to gain access to more than 50 new CPU, memory, file system, and disk I/O metrics.",
+      "Implement AWS X-Ray to trace and analyze user requests as they travel through the RDS databases."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "Amazon RDS Enhanced Monitoring provides real-time access to a set of 50+ CPU, memory, file system, and disk I/O metrics. These metrics are collected from the operating system that the RDS instance runs on and are more granular than the basic metrics provided by Amazon CloudWatch, making it ideal for database administrators to analyze and optimize the performance of their RDS instances.",
+      wrong: [
+        { label: "Amazon RDS Performance Insights", reason: "Provides visibility into the performance of your RDS database and allows you to analyze database load, but it does not provide operating system-level metrics." },
+        { label: "AWS CloudWatch", reason: "CloudWatch provides monitoring for AWS cloud resources, but it does not provide the same level of detail for OS-level metrics as RDS Enhanced Monitoring." },
+        { label: "AWS X-Ray", reason: "X-Ray helps developers analyze and debug production distributed applications, but it is not designed for monitoring database performance metrics." }
+      ]
+    }
+  },
+  {
+    text: "A company uses an Amazon S3 bucket to store data in both JSON and .csv formats. They also operate databases on Amazon RDS for Microsoft SQL Server, have Amazon DynamoDB tables in provisioned capacity mode, and run queries on an Amazon Redshift cluster. They need a straightforward solution that allows their data scientists to perform SQL-like queries across all these data sources.\n\nWhat is the simplest solution for enabling these queries with the least operational overhead?",
+    options: [
+      "Catalog the data with AWS Glue, and query using Redshift Spectrum, applying standard SQL to structured data and PartiQL to JSON.",
+      "Enable AWS Glue to catalog the data sources and use Amazon Athena with standard SQL for structured data and PartiQL for the JSON data.",
+      "Use AWS Glue to catalog and transform JSON data into .csv format using Glue jobs, then query all data using Amazon Athena.",
+      "Set up a data lake with AWS Lake Formation, convert all data to Apache Parquet using Lake Formation jobs, and query the data using Amazon Athena or Redshift Spectrum."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "AWS Glue can catalog data across different AWS services, and Amazon Athena is designed to directly query data in various formats stored in S3 using standard SQL and PartiQL for JSON data. This solution avoids the additional steps of data transformation and leverages managed services to handle data querying, minimizing overhead. Athena supports querying using PartiQL, which extends SQL to include semi-structured and nested data.",
+      wrong: [
+        { label: "AWS Glue + Redshift Spectrum", reason: "Using Redshift Spectrum adds unnecessary complexity when directly querying data in S3 because it requires an existing Redshift cluster and does not add benefit over Athena for the task at hand." },
+        { label: "AWS Glue transform JSON to CSV", reason: "Transforming JSON data into .csv format adds additional steps and complexity, increasing operational overhead, which is not desired." },
+        { label: "AWS Lake Formation + convert to Parquet", reason: "While Lake Formation is a powerful tool for creating a data lake, transforming all data to Apache Parquet format is an extra step that adds complexity and is not necessary for SQL-like querying with services like Athena." }
+      ]
+    }
+  },
+  {
+    text: "A data engineer needs to reformat newly acquired .csv data in an S3 bucket for more efficient analytics. The data includes timestamps, and older data is removed daily.\n\nWhat is the most cost-effective AWS solution to transform and optimize this data for query performance?",
+    options: [
+      "Use AWS Glue to convert the .csv data to Apache Parquet and partition it by timestamp.",
+      "Run an Athena CTAS query to convert the data to Parquet format with Snappy compression, partitioned by timestamp.",
+      "Configure an EMR Spark job to transform the .csv files into Parquet, partitioned by the creation timestamp.",
+      "Set up a daily Lambda function to convert and partition the .csv data into Parquet format within S3."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "Amazon Athena's CTAS feature enables the conversion of data into columnar formats like Parquet, which is optimized for analytics. Parquet format combined with Snappy compression improves performance and reduces costs by minimizing storage use and speeding up query times. Partitioning the data by timestamp ensures efficient data management and retrieval, aligning with the need for daily removal of outdated data. This serverless solution does not require managing any infrastructure.",
+      wrong: [
+        { label: "AWS Glue to Parquet", reason: "AWS Glue is a fully managed ETL service that could perform the transformation. However, for a straightforward conversion and partitioning task, AWS Glue might introduce more complexity and cost compared to the simplicity and serverless nature of an Athena CTAS query." },
+        { label: "Amazon EMR Spark job", reason: "EMR is typically more cost-effective for large-scale, complex processing jobs. The overhead of setting up and managing an EMR cluster is not necessary for this scenario, making Athena a more cost-effective choice." },
+        { label: "Daily Lambda function", reason: "For data transformation tasks, particularly for large datasets, Lambda may face limitations in terms of execution time and memory. Athena's CTAS is a more suitable tool for large-scale data transformation without these limitations." }
+      ]
+    }
+  },
+  {
+    text: "A mobile gaming company uses Amazon DynamoDB to store player session data. The data becomes irrelevant after 24 hours and should be automatically deleted to save storage space and reduce costs.\n\nWhich DynamoDB feature should the company use to automatically remove outdated player session data after 24 hours?",
+    options: [
+      "DynamoDB TTL (Time To Live)",
+      "DynamoDB Streams",
+      "DynamoDB Conditional Writes",
+      "DynamoDB Auto Scaling"
+    ],
+    correct: [0],
+    feedback: {
+      explanation: "DynamoDB TTL is a feature that automatically deletes items from a table after a certain time period that you define. By enabling TTL and setting it to 24 hours for the player session data, the company can have DynamoDB automatically remove items that are older than 24 hours. This process runs in the background and does not consume any write throughput, making it a cost-effective solution for managing the lifecycle of temporary data without manual intervention.",
+      wrong: [
+        { label: "DynamoDB Streams", reason: "DynamoDB Streams capture changes to items in a DynamoDB table in near real-time for various purposes like triggering AWS Lambda functions or replicating data. However, Streams do not provide automatic deletion of items based on a time period." },
+        { label: "DynamoDB Conditional Writes", reason: "Conditional Writes allow you to specify conditions that must be met for a write operation to occur, but they do not automatically delete items after a certain time period." },
+        { label: "DynamoDB Auto Scaling", reason: "DynamoDB Auto Scaling automatically adjusts the read and write capacity of the table to match the workload. While it helps manage throughput and cost, it does not relate to the automatic deletion of items based on their age." }
+      ]
+    }
+  },
+  {
+    text: "A company stores sensitive documents in an Amazon S3 bucket in the US East (N. Virginia) region. To comply with data redundancy policies, they require an automatic backup of these documents to a bucket in the EU (Frankfurt) region.\n\nWhich Amazon S3 feature should the company use to ensure that the documents are automatically replicated to the second bucket in a different region?",
+    options: [
+      "S3 Transfer Acceleration",
+      "S3 Cross-Region Replication (CRR)",
+      "S3 Lifecycle Policies",
+      "S3 Versioning"
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "S3 Cross-Region Replication (CRR) is the specific feature that enables automatic replication of objects from one S3 bucket to another bucket located in a different AWS region. This feature will meet the company's requirement for data redundancy by creating a copy of the sensitive documents in the EU (Frankfurt) region, ensuring that there is a backup in case of region-specific issues.",
+      wrong: [
+        { label: "S3 Transfer Acceleration", reason: "S3 Transfer Acceleration is designed to speed up the transfer of files to and from S3 buckets over long distances using Amazon CloudFront's globally distributed edge locations. While it accelerates uploads and downloads, it does not provide automatic replication of objects between regions." },
+        { label: "S3 Lifecycle Policies", reason: "S3 Lifecycle Policies are used to manage objects' life cycles by automating actions like transitioning to different storage classes or deleting objects after a certain period. They do not provide a mechanism for replicating data across regions." },
+        { label: "S3 Versioning", reason: "S3 Versioning is used to preserve, retrieve, and restore every version of every object stored in an S3 bucket. Versioning does not inherently replicate data to another region; it would need to be combined with CRR for that purpose." }
+      ]
+    }
+  },
+  {
+    text: "A video production company stores large video files in Amazon S3 using the S3 Standard storage class. After initial editing, these files are infrequently accessed but need to be readily available for future use. The company wants to optimize storage costs while ensuring that these files remain accessible with minimal retrieval time when needed.\n\nWhich S3 Lifecycle policy should the company implement for their video files?",
+    options: [
+      "Transition objects to S3 Intelligent-Tiering after 30 days, then to S3 Glacier after 1 year.",
+      "Transition objects to S3 One Zone-Infrequent Access (S3 One Zone-IA) after 60 days, then to S3 Glacier Deep Archive after 6 months.",
+      "Transition objects to S3 Standard-Infrequent Access (S3 Standard-IA) after 90 days, retaining in the same class thereafter.",
+      "Transition objects to S3 Glacier after 30 days, then to S3 Glacier Deep Archive after 1 year."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "S3 Standard-Infrequent Access (S3 Standard-IA) is ideal for data that is accessed less frequently but requires rapid access when needed, such as video files for future editing. Transitioning to S3 Standard-IA after 90 days reduces storage costs while maintaining high availability and fast access. Retaining the files in S3 Standard-IA thereafter strikes a balance between cost-effectiveness and accessibility.",
+      wrong: [
+        { label: "Intelligent-Tiering then Glacier after 1 year", reason: "Transitioning to S3 Glacier after only 1 year may not be suitable for the company's need for minimal retrieval time. S3 Glacier is designed for long-term archival with slower retrieval times." },
+        { label: "One Zone-IA then Glacier Deep Archive after 6 months", reason: "S3 One Zone-IA offers less resilience and availability. Transitioning to S3 Glacier Deep Archive after only 6 months is not ideal for video files that may need to be accessed with minimal retrieval time, as Deep Archive is meant for long-term storage with longer retrieval times." },
+        { label: "Glacier after 30 days then Glacier Deep Archive", reason: "Transitioning to S3 Glacier and then to Glacier Deep Archive involves longer retrieval times, which may not be suitable for the company's need to access video files quickly for future use." }
+      ]
+    }
+  },
+  {
+    text: "A company stores operational data in Amazon S3 using the S3 Standard storage class. Data usage analysis shows that most files are frequently accessed for the first 6 months, occasionally accessed for the next 18 months, and rarely accessed thereafter. The company seeks a cost-effective storage strategy that maintains high availability throughout the data lifecycle.\n\nWhich S3 Lifecycle policy should the company implement for their data storage needs?",
+    options: [
+      "Transition objects to S3 Standard-Infrequent Access (S3 Standard-IA) after 6 months, then to S3 Glacier after 2 years.",
+      "Transition objects to S3 One Zone-Infrequent Access (S3 One Zone-IA) after 6 months, then to S3 Glacier Deep Archive after 2 years.",
+      "Transition objects to S3 Intelligent-Tiering after 6 months, then to S3 Glacier Deep Archive after 2 years.",
+      "Transition objects to S3 Standard-Infrequent Access (S3 Standard-IA) after 6 months, then to S3 Glacier Deep Archive after 2 years."
+    ],
+    correct: [3],
+    feedback: {
+      explanation: "S3 Standard-IA is designed for data that is less frequently accessed but requires rapid access when needed. Transitioning to S3 Standard-IA after 6 months is cost-effective for the occasional access pattern. After 2 years, when the data is rarely accessed, moving it to S3 Glacier Deep Archive offers the lowest storage cost for long-term archiving, while still maintaining data availability (albeit with longer retrieval times).",
+      wrong: [
+        { label: "Standard-IA then Glacier after 2 years", reason: "While transitioning to S3 Standard-IA after 6 months is appropriate, moving to S3 Glacier after 2 years is not as cost-effective as S3 Glacier Deep Archive for data that is accessed only once or twice a year." },
+        { label: "One Zone-IA then Glacier Deep Archive", reason: "S3 One Zone-IA stores data in a single Availability Zone and does not provide the same level of high availability as S3 Standard-IA, which stores data across multiple Availability Zones." },
+        { label: "Intelligent-Tiering then Glacier Deep Archive", reason: "In this scenario, where the access pattern is well-defined, the company can more cost-effectively manage storage costs by directly transitioning to S3 Standard-IA and then to S3 Glacier Deep Archive, without needing Intelligent-Tiering's automatic adjustment." }
+      ]
+    }
+  },
+  {
+    text: "A data engineering team at an online retail company is optimizing the performance of their Amazon Redshift data warehouse. The warehouse contains a large sales table with millions of rows and a smaller products table. Queries often join these two tables, and the team wants to optimize the query performance, especially for these join operations.\n\nWhich Redshift distribution style should the team use for the sales and products tables to enhance query performance?",
+    options: [
+      "Configure the sales table to EVEN distribution and the products table to KEY distribution.",
+      "Configure the sales table to ALL distribution and the products table to EVEN distribution.",
+      "Configure the sales table to AUTO distribution and the products table to ALL distribution.",
+      "Configure KEY distribution for both the sales and products tables based on the join column."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "For the large sales table, using AUTO distribution allows Amazon Redshift to automatically select the most appropriate distribution style based on the table's size and the query patterns. For the smaller products table, using ALL distribution replicates the entire table to each node in the Redshift cluster, significantly speeding up join operations since the products table is present on every node, eliminating the need for costly data redistribution during queries.",
+      wrong: [
+        { label: "EVEN for sales + KEY for products", reason: "EVEN distribution would spread the rows of the sales table evenly across all nodes but may not be the most efficient for join operations. KEY distribution for the products table would only be optimal if frequently joined on a specific column that is evenly distributed. For smaller tables, ALL distribution is often more effective." },
+        { label: "ALL for sales + EVEN for products", reason: "Using ALL distribution for a large table like sales is not efficient, as it would replicate the entire table across all nodes, consuming excessive storage space and potentially impacting performance. ALL distribution is more suitable for smaller dimension tables." },
+        { label: "KEY distribution for both", reason: "While KEY distribution can improve join performance, it requires careful selection of the distribution key and is generally more beneficial for evenly sized large tables. For scenarios involving a large fact table and a smaller dimension table, combining AUTO or EVEN with ALL distribution is often more effective." }
+      ]
+    }
+  },
+  {
+    text: "A startup company needs a user-friendly tool to visualize and analyze its sales data stored in Amazon S3. The solution should be easy to use, require minimal setup, and provide interactive dashboards and insights.\n\nWhich AWS service should the company use for visualizing and analyzing their sales data?",
+    options: [
+      "Amazon QuickSight",
+      "Amazon Athena",
+      "AWS Glue",
+      "Amazon Redshift"
+    ],
+    correct: [0],
+    feedback: {
+      explanation: "Amazon QuickSight is a fast, cloud-powered business intelligence service that makes it easy to build visualizations, perform ad-hoc analysis, and quickly get business insights from data. It can directly connect to various data sources, including Amazon S3, and provides user-friendly tools for creating interactive dashboards. QuickSight is designed for users of all skill levels and does not require any servers to set up or manage.",
+      wrong: [
+        { label: "Amazon Athena", reason: "Amazon Athena is an interactive query service for analyzing data in Amazon S3 using standard SQL. While powerful for querying data, Athena is not a visualization tool and would need to be integrated with a visualization tool like Amazon QuickSight for dashboards." },
+        { label: "AWS Glue", reason: "AWS Glue is a serverless data integration service primarily used for ETL operations and data cataloging, rather than for data visualization and interactive analysis." },
+        { label: "Amazon Redshift", reason: "Amazon Redshift is a fully managed data warehouse service used for storing and analyzing large datasets, but like Athena, it is not a visualization tool and does not provide visualization capabilities on its own." }
+      ]
+    }
+  },
+  {
+    text: "A news website tracks user interactions and search queries to gain insights into reader preferences and content engagement. The website needs to process and analyze this data in real-time to quickly adapt their content strategy. The solution must support complex search capabilities and real-time analytics.\n\nWhich AWS service should the website use to store and analyze the user interaction data for real-time search and analytics?",
+    options: [
+      "Use Amazon RDS to capture user interaction data and Amazon QuickSight for real-time analytics and search capabilities.",
+      "Implement Amazon Kinesis Data Streams to collect data and Amazon Redshift for real-time search and analytics.",
+      "Capture user data in Amazon S3 and use Amazon Athena for real-time analytics and search functionalities.",
+      "Store the interaction data in Amazon DynamoDB and use Amazon Elasticsearch Service for complex search and real-time analytics."
+    ],
+    correct: [3],
+    feedback: {
+      explanation: "Amazon Elasticsearch Service is well-suited for scenarios requiring sophisticated search capabilities and real-time analytics, like analyzing user interactions and search queries on a news website. Storing the raw data in Amazon DynamoDB provides a scalable and efficient NoSQL database solution, and the data can be integrated with Elasticsearch to enable complex searches and real-time insights into reader behavior.",
+      wrong: [
+        { label: "Amazon RDS + QuickSight", reason: "Amazon RDS is not optimized for real-time search and analytics on the scale required for a news website's user interaction data. Amazon QuickSight is primarily a business intelligence tool, not specialized in real-time search." },
+        { label: "Kinesis Data Streams + Redshift", reason: "While Kinesis is effective for real-time data collection, Amazon Redshift is more aligned with large-scale data warehousing and batch analytics rather than real-time search and analysis." },
+        { label: "Amazon S3 + Athena", reason: "Amazon S3 and Athena are great for storing and querying large datasets, but Athena is more suitable for ad-hoc querying and data analysis, rather than the sophisticated search and real-time analytics capabilities provided by Elasticsearch." }
+      ]
+    }
+  },
+  {
+    text: "A financial analytics company stores large CSV files containing transaction data in an Amazon S3 bucket. They need to implement a solution that allows their data engineers to run SQL queries directly on these CSV files stored in S3, without the need for additional data transformation or loading into a database.\n\nWhich AWS service should the company use to query CSV files directly in the S3 bucket?",
+    options: [
+      "Use Amazon Redshift Spectrum to execute SQL queries on CSV files in S3.",
+      "Use AWS Data Pipeline to transfer CSV data from S3 to Amazon RDS for querying.",
+      "Use Amazon Athena to run SQL queries directly on the CSV files stored in S3.",
+      "Use Amazon EMR with a Hive metastore to query the CSV files in the S3 bucket."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "Amazon Athena is an interactive query service that enables users to analyze data directly in Amazon S3 using standard SQL. It is perfectly suited for the company's requirement to run SQL queries on CSV files stored in S3. Athena is serverless, so there's no infrastructure to manage, and it works directly with data in various formats, including CSV, stored in S3.",
+      wrong: [
+        { label: "Amazon Redshift Spectrum", reason: "While Redshift Spectrum allows querying data in S3, it is part of the Redshift data warehousing service and requires managing a Redshift cluster. This might be more complex and costlier than necessary for directly querying CSV files." },
+        { label: "AWS Data Pipeline + Amazon RDS", reason: "Data Pipeline requires transferring data to a database service like Amazon RDS, adding an unnecessary step of moving data from S3 to RDS, which is not required with services like Athena that can query data directly in S3." },
+        { label: "Amazon EMR with Hive metastore", reason: "Setting up EMR and configuring a Hive metastore is more complex and resource-intensive compared to using Athena. For direct SQL querying of data in S3, Athena is more straightforward and cost-effective." }
+      ]
+    }
+  },
+  {
+    text: "A data engineer is setting up an AWS Step Functions workflow to coordinate a series of computational tasks for a large dataset. Each data element in the dataset must be processed through the same sequence of tasks. The workflow should execute these tasks sequentially for each data element.\n\nWhich Step Functions state should the data engineer use for this sequential processing requirement?",
+    options: [
+      "Parallel",
+      "Choice",
+      "Wait",
+      "Map"
+    ],
+    correct: [3],
+    feedback: {
+      explanation: "The Map state in AWS Step Functions is specifically designed to iterate over a dataset and process each data element through a defined sequence of steps. It allows sequential or parallel execution of tasks for each item in a list. For this use case, where each data element must go through the same sequence of tasks sequentially, the Map state is the ideal choice. The Map state can also handle large datasets efficiently.",
+      wrong: [
+        { label: "Parallel", reason: "The Parallel state is used to execute multiple branches of tasks concurrently, not sequentially for each data element. It is useful for running independent tasks simultaneously but does not provide functionality for iterating over a dataset." },
+        { label: "Choice", reason: "The Choice state is used for making decisions within the workflow based on the input data, allowing branching logic. It is not suitable for processing data elements in sequence or parallel." },
+        { label: "Wait", reason: "The Wait state introduces a delay or a wait time in the workflow. It is used to pause the state machine execution for a certain time and does not facilitate the processing of data elements." }
+      ]
+    }
+  },
+  {
+    text: "A cloud architect is developing an AWS Step Functions workflow to orchestrate a data migration process. The workflow involves several dependent tasks: data extraction, transformation, and loading into a new system. Each task must be completed before the next one begins.\n\nWhich Step Functions state should the architect use to ensure that these tasks are executed in the required sequence?",
+    options: [
+      "Parallel",
+      "Choice",
+      "Wait",
+      "Succeed"
+    ],
+    correct: [3],
+    feedback: {
+      explanation: "The 'Succeed' state in AWS Step Functions is used to mark a workflow as successful. While 'Succeed' itself does not orchestrate the sequence, it is used at the end of the workflow to indicate successful completion of all tasks in the required order. The sequential execution of tasks can be managed by the structure of the state machine, where each task transitions to the next upon successful completion, ultimately leading to the 'Succeed' state.",
+      wrong: [
+        { label: "Parallel", reason: "The 'Parallel' state is used for executing multiple branches of a workflow concurrently, not sequentially. It would not ensure that the data migration tasks are completed in the specific order of extraction, transformation, and loading." },
+        { label: "Choice", reason: "The 'Choice' state is used to make decisions within a workflow based on input data, allowing the workflow to branch into different paths. It does not facilitate the sequential execution of tasks." },
+        { label: "Wait", reason: "The 'Wait' state introduces a delay in the workflow. It is used to pause execution for a certain time but does not control the sequence of task execution." }
+      ]
+    }
+  },
+  {
+    text: "A data engineer is developing an AWS Step Functions workflow to manage a batch image processing task. Each image in a large dataset requires an individual enhancement algorithm to be applied. The workflow needs to handle these tasks concurrently to optimize processing time.\n\nWhich state in AWS Step Functions should the data engineer use to ensure simultaneous processing of multiple images?",
+    options: [
+      "Use the Parallel state to run image processing tasks concurrently.",
+      "Use the Choice state to direct each image to its specific processing task.",
+      "Use the Map state to apply the enhancement algorithm to each image individually, yet concurrently.",
+      "Use the Wait state to manage the sequencing of the image processing tasks."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "The Map state in AWS Step Functions is designed specifically for running a set of tasks in parallel, especially when each task is similar but needs to be applied to different items in a collection. In this scenario, the Map state allows the data engineer to apply the image enhancement algorithm to each image in the dataset concurrently, optimizing processing time by handling multiple images simultaneously.",
+      wrong: [
+        { label: "Parallel state", reason: "While the Parallel state allows for concurrent execution of tasks, it's more suited for scenarios where different tasks or workflows need to run in parallel. It is less efficient for applying the same process to multiple items in a collection, which is the primary requirement in this scenario." },
+        { label: "Choice state", reason: "The Choice state in Step Functions is used for decision-making between branches of a workflow based on the input data. It does not facilitate parallel processing of tasks and therefore is not suitable for this requirement." },
+        { label: "Wait state", reason: "The Wait state is used to delay the workflow for a specific time. It does not support parallel processing but instead introduces a pause or delay in the workflow, which would be counterproductive to the requirement of processing multiple files concurrently." }
+      ]
+    }
+  },
+  {
+    text: "A high-traffic news website is experiencing performance issues due to frequent, read-heavy queries to their main database, which stores frequently accessed user session data and website preferences. To enhance the website's responsiveness and reduce database load, they require a caching solution that provides high throughput and low latency for data retrieval.\n\nWhich AWS service should the website implement to efficiently cache frequently accessed data and improve application performance?",
+    options: [
+      "Deploy Amazon Relational Database Service (RDS) with read replicas to distribute the load of read queries.",
+      "Deploy Amazon DynamoDB with DAX (DynamoDB Accelerator) for caching read-heavy query results.",
+      "Configure Amazon S3 with Amazon CloudFront for caching static user session data and website preferences.",
+      "Implement Amazon ElastiCache to cache frequent read-query results and reduce direct database queries."
+    ],
+    correct: [3],
+    feedback: {
+      explanation: "Amazon ElastiCache is a fully managed in-memory data store and cache service that is ideal for applications requiring fast access to data. By caching frequently accessed data, such as user session information and website preferences, ElastiCache can significantly improve the performance of read-heavy applications, alleviating the load on their primary database and achieving higher throughput and lower latency.",
+      wrong: [
+        { label: "Amazon RDS with read replicas", reason: "Read replicas can help distribute the read load, but they may not sufficiently address the performance issues for high-traffic, read-heavy scenarios. They also do not provide the same speed of access as an in-memory caching solution like ElastiCache." },
+        { label: "Amazon DynamoDB with DAX", reason: "DAX is a caching service specifically for DynamoDB. If the main database is not DynamoDB, then DAX is not applicable." },
+        { label: "Amazon S3 with CloudFront", reason: "Amazon S3 and CloudFront are typically used for caching static content and are not suited for dynamic user session data or database query results, which are better handled by a service like ElastiCache." }
+      ]
+    }
+  },
+  {
+    text: "A mobile app development company needs a database solution to manage user profiles and app settings. The data structure includes key-value pairs and needs to support fast, millisecond response times for read and write operations, regardless of traffic spikes. The solution should be fully managed to minimize maintenance overhead.\n\nWhich AWS service is most suitable for storing and retrieving the user profile data for the mobile app?",
+    options: [
+      "Use Amazon RDS with provisioned IOPS to ensure high performance for the key-value pairs.",
+      "Implement Amazon DynamoDB for its key-value storage capabilities and fast, consistent performance.",
+      "Configure Amazon S3 to store user data as objects, utilizing S3 Select for efficient data retrieval.",
+      "Deploy Amazon ElastiCache to manage user profile data in-memory for rapid access."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "Amazon DynamoDB is a fully managed NoSQL database service known for providing fast and predictable performance with seamless scalability. It is ideal for handling key-value data structures and can support high request rates while maintaining low latencies, making it perfect for user profiles and app settings in a mobile app environment. DynamoDB's fully managed nature also means minimal maintenance overhead.",
+      wrong: [
+        { label: "Amazon RDS with provisioned IOPS", reason: "While Amazon RDS can be configured for high performance, it's a relational database service more suited for complex transactional workloads, not as optimal for simple key-value data as DynamoDB." },
+        { label: "Amazon S3 with S3 Select", reason: "Amazon S3 is an object storage service and, although highly scalable, it's not designed for the kind of high-speed, low latency read/write access required for user profile data in a mobile app." },
+        { label: "Amazon ElastiCache", reason: "Amazon ElastiCache provides in-memory caching, which is great for fast data access. However, it's primarily used as a caching layer, not a standalone database, and doesn't provide the persistence or query capabilities of DynamoDB." }
+      ]
+    }
+  },
+  {
+    text: "An e-commerce company is shifting their extensive product catalog data, historically managed in an on-premises relational database, to the AWS cloud. The product data includes structured and semi-structured formats, with new updates and schemas introduced regularly. The company aims to analyze this data using SQL queries without setting up complex database infrastructure. They need a serverless solution that allows them to query this data directly in Amazon S3, where it will be stored.\n\nWhich AWS service should the company use to perform SQL queries on their product catalog data stored in S3, ensuring flexibility for schema changes and a serverless operational model?",
+    options: [
+      "Migrate the data to Amazon RDS and use Amazon Athena to perform SQL queries directly on the RDS database.",
+      "Implement Amazon Athena, leveraging its integration with AWS Glue Data Catalog for handling schema changes and querying data in S3.",
+      "Use Amazon Redshift Spectrum to query the data in S3, with AWS Glue Data Catalog managing the evolving schemas.",
+      "Configure AWS Lambda functions to process and query data in S3, using Amazon DynamoDB for schema management."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "Amazon Athena is a serverless interactive query service that allows SQL querying directly on data stored in Amazon S3. Its integration with AWS Glue Data Catalog is crucial for managing evolving data schemas. This setup enables the e-commerce company to handle schema variations in their product catalog data without the need to set up and manage a traditional database infrastructure.",
+      wrong: [
+        { label: "Migrate to Amazon RDS + Athena", reason: "Athena is designed to query data in Amazon S3, not in Amazon RDS. This option does not leverage Athena's strengths and introduces unnecessary complexity by involving RDS." },
+        { label: "Amazon Redshift Spectrum", reason: "While Redshift Spectrum allows querying data in S3, it requires managing a Redshift cluster, which contradicts the requirement for a serverless solution." },
+        { label: "AWS Lambda + DynamoDB", reason: "This approach would require significant custom development and does not provide a simple, serverless solution for SQL querying of data in S3. DynamoDB is not typically used for schema management in this context." }
+      ]
+    }
+  },
+  {
+    text: "A marketing firm analyzes social media engagement data which is collected daily and saved as .csv files in an Amazon S3 bucket. The firm's data engineer needs to ensure that the S3 data is cataloged daily for use with AWS analytics services.\n\nWhat steps should the data engineer take to catalog the social media data files in the AWS Glue Data Catalog each day with the least manual effort?",
+    options: [
+      "Assign an IAM role with the necessary Glue permissions to the AWS Glue crawler, point it to the S3 bucket's social media data, and set a daily schedule for the crawler.",
+      "Use AWS Lambda to invoke an AWS Glue crawler for the social media data in S3, running the function with a CloudWatch Events rule on a daily schedule.",
+      "Configure an AWS Batch job to execute the AWS Glue crawler for the S3 data, with a scheduled CloudWatch Events rule to trigger the job each day.",
+      "Implement an Amazon EventBridge rule to trigger an AWS Step Functions workflow that runs the Glue crawler daily."
+    ],
+    correct: [0],
+    feedback: {
+      explanation: "Utilizing an AWS Glue crawler with the correct permissions automates the process of cataloging new and modified data files in the AWS Glue Data Catalog. By setting the crawler to run on a daily schedule, the data engineer ensures that the social media engagement data is consistently updated in the catalog with minimal manual intervention, leveraging AWS Glue's managed service capabilities.",
+      wrong: [
+        { label: "AWS Lambda to invoke crawler", reason: "While AWS Lambda could be used to trigger the Glue crawler, this approach adds complexity by introducing an additional service. It is not necessary to use Lambda when the Glue crawler can be scheduled directly." },
+        { label: "AWS Batch job", reason: "AWS Batch is designed for batch computing workloads and not for running Glue crawlers. This method introduces unnecessary complexity and is not as straightforward as scheduling the crawler directly within the AWS Glue service." },
+        { label: "Amazon EventBridge + Step Functions", reason: "Setting up a Step Functions workflow to trigger a Glue crawler adds an additional layer of orchestration that is not required for the simple task of running a crawler on a schedule. AWS Glue crawlers already have built-in scheduling capability." }
+      ]
+    }
+  },
+  {
+    text: "A mobile gaming company experiences predictable spikes in server load every Friday evening when users are most active. Their player data is stored in an Amazon DynamoDB table set to provisioned capacity mode. During the rest of the week, the server traffic is much lower. The company needs to manage the DynamoDB capacity in a way that keeps costs low while ensuring the game servers remain responsive during busy periods.\n\nWhich strategy should the company adopt to optimize DynamoDB performance for the expected traffic pattern while maintaining cost efficiency?",
+    options: [
+      "Manually adjust the provisioned capacity each Friday to meet the expected peak and lower it after the busy period ends.",
+      "Implement DynamoDB auto-scaling to adjust the provisioned capacity based on the usage patterns automatically.",
+      "Split the player data across multiple DynamoDB tables to distribute the load, adjusting provisioned capacity for each table accordingly.",
+      "Switch to DynamoDB on-demand capacity mode, allowing the table to automatically scale to accommodate the varying loads."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "AWS Application Auto Scaling allows for the scheduling of scaling actions based on predictable workload patterns. By setting higher provisioned capacity during peak times and lower capacity during off-peak times, the company can ensure that the application performs consistently during high-demand periods while reducing costs when demand is low. This avoids paying for unneeded capacity during slow periods without manual intervention.",
+      wrong: [
+        { label: "Manual adjustment each Friday", reason: "Auto-scaling dynamically adjusts the provisioned throughput capacity in response to actual traffic patterns without manual intervention, which is more efficient and reduces operational overhead." },
+        { label: "Split data across multiple tables", reason: "Distributing data across multiple tables and manually managing capacity for each is more complex and might not lead to cost savings. It introduces additional complexity in managing and querying data across tables." },
+        { label: "DynamoDB on-demand capacity mode", reason: "On-demand capacity mode is suitable for workloads with unpredictable traffic and can be more expensive than provisioned capacity with auto-scaling for predictable patterns. It may not be as cost-effective for a use case with a regular and predictable peak period." }
+      ]
+    }
+  },
+  {
+    text: "A streaming service company stores video metadata in various databases, including Amazon RDS, and in JSON format within Amazon S3. They require a managed service to automatically catalog this data and reflect schema changes.\n\nWhich AWS service should they use for automatic metadata cataloging with minimal manual effort?",
+    options: [
+      "Configure AWS Lambda to periodically scan databases and S3, updating an Amazon RDS instance serving as a metadata catalog.",
+      "Use AWS Glue Data Catalog with scheduled crawlers for databases and S3 to maintain an up-to-date central metadata repository.",
+      "Use Amazon Athena to query databases and S3, writing metadata results to Amazon DynamoDB as a catalog.",
+      "Configure Amazon Redshift Spectrum to scan data and populate a metadata schema in a Redshift cluster."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "AWS Glue Data Catalog is a fully managed service that serves as a central repository for metadata across AWS services. It has built-in crawlers that automatically discover and catalog metadata from various sources like Amazon RDS and Amazon S3. When configured to run on a schedule, these crawlers can detect and incorporate schema changes, keeping the metadata repository current without the need for manual updates.",
+      wrong: [
+        { label: "AWS Lambda periodic scan", reason: "This approach would require custom coding and manual setup of AWS Lambda functions, increasing operational effort. It's not as efficient as using a purpose-built service like AWS Glue Data Catalog." },
+        { label: "Amazon Athena + DynamoDB", reason: "While Amazon Athena can query metadata, using it in conjunction with DynamoDB to maintain a metadata catalog would involve manual processes for synchronization, which is not as streamlined as using AWS Glue Data Catalog." },
+        { label: "Amazon Redshift Spectrum", reason: "Redshift Spectrum can query data across databases and S3, but it's not designed for automatic metadata cataloging. It requires more complex setup and maintenance compared to the automated capabilities of AWS Glue Data Catalog." }
+      ]
+    }
+  },
+  {
+    text: "A financial analytics firm analyzes historical trading data using an Amazon Redshift cluster. To improve query performance without additional costs, the data engineer seeks to optimize data distribution across cluster nodes. The dataset consists of large transaction tables exceeding 500 GB and numerous smaller dimension tables under 5 MB.\n\nWhat strategy should the data engineer employ to enhance query efficiency in Redshift given the varying table sizes, without expanding the cluster?",
+    options: [
+      "Continue using EVEN distribution for transaction tables and switch to KEY distribution for dimension tables to co-locate related data.",
+      "Apply the EVEN distribution style to the transaction tables and use the ALL distribution style for the frequently joined dimension tables.",
+      "Change to KEY distribution for large tables based on common join columns and maintain EVEN distribution for smaller tables.",
+      "Implement the ALL distribution style for the smaller dimension tables that are frequently joined in queries and adjust sort keys for improved query performance."
+    ],
+    correct: [3],
+    feedback: {
+      explanation: "Using the ALL distribution style for smaller tables, especially those frequently involved in joins, ensures that their data is replicated across all nodes in the Redshift cluster. This approach minimizes data shuffling during query execution, leading to faster query performance. For larger tables, maintaining the current distribution style and optimizing sort keys can help improve query efficiency without the need for additional hardware resources.",
+      wrong: [
+        { label: "EVEN for transaction + KEY for dimension", reason: "While KEY distribution can be effective for specific scenarios, it doesn't automatically ensure optimal performance across different table sizes and types. It can lead to data skew if the chosen key is not uniformly distributed." },
+        { label: "EVEN for transaction + ALL for dimension (no sort keys)", reason: "This option is close to the correct one, but it doesn't mention the use of sort keys. While using ALL distribution for small tables is beneficial, neglecting to optimize sort keys can still result in suboptimal query performance." },
+        { label: "KEY for large tables + EVEN for smaller tables", reason: "KEY distribution for large tables can lead to data skewing and uneven distribution if not carefully managed, potentially worsening performance. It's generally more suitable for tables that are frequently joined on the distribution key." }
+      ]
+    }
+  },
+  {
+    text: "A data analytics company uses Amazon Athena to perform SQL-based data transformations and creates new datasets using the Create Table As Select (CTAS) feature. The engineering team plans to use Apache Spark on Athena to perform advanced data analysis on the CTAS-generated tables. They need a solution that allows Apache Spark to seamlessly discover and query these tables without manual schema registration or duplication.\n\nWhat Athena feature should the team use to ensure Apache Spark can access the CTAS-generated tables directly?",
+    options: [
+      "Use the AWS Glue Data Catalog to store metadata for the CTAS-generated tables.",
+      "Connect Apache Spark to Athena using the Athena JDBC driver.",
+      "Enable Athena Workgroup-level configurations to expose CTAS results to Spark.",
+      "Save CTAS SQL queries in Athena's Saved Queries section for Spark access."
+    ],
+    correct: [0],
+    feedback: {
+      explanation: "Amazon Athena uses the AWS Glue Data Catalog to store metadata for tables, including those created with the CTAS feature. When a CTAS query is executed, Athena registers the resulting table in the Data Catalog automatically. Apache Spark on Athena can read this catalog directly, allowing seamless access to table metadata, schemas, and locations. This enables Spark to query CTAS-generated tables without requiring additional configuration or schema definitions.",
+      wrong: [
+        { label: "Athena JDBC driver", reason: "The JDBC driver enables external SQL tools to connect to Athena but does not enable Spark-native integration with table metadata or the Data Catalog." },
+        { label: "Athena Workgroup-level configurations", reason: "Workgroups manage query settings and usage tracking but do not affect metadata registration or access for Spark." },
+        { label: "Saved Queries section", reason: "Saved Queries are used for managing SQL scripts in Athena and do not expose metadata or table definitions to Spark." }
+      ]
+    }
+  },
+  {
+    text: "An emerging tech startup is developing a new web application that experiences unpredictable workloads and sporadic bursts of traffic. The application requires a relational database with automatic scaling capabilities to handle the unpredictable workload while optimizing costs.\n\nWhich AWS database service should the startup use to meet these requirements?",
+    options: [
+      "Deploy an Amazon RDS for MySQL instance with Read Replicas to manage the bursts in traffic and scale out the database capacity.",
+      "Implement an Amazon Aurora Serverless database cluster that automatically scales compute and memory capacity with the fluctuating workload.",
+      "Use Amazon DynamoDB with on-demand capacity mode to handle the variable database workloads and traffic bursts.",
+      "Provision an Amazon Redshift cluster and use the elastic resize feature to scale computing resources up or down based on the demand."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "Amazon Aurora Serverless is an on-demand, auto-scaling configuration for Amazon Aurora (MySQL-compatible edition). Aurora Serverless automatically adjusts the database's compute capacity in response to the application's needs, making it a suitable choice for workloads with unpredictable traffic patterns. Aurora Serverless helps to optimize costs by automatically scaling the database capacity with the workload and charging per second for the database capacity used.",
+      wrong: [
+        { label: "Amazon RDS for MySQL with Read Replicas", reason: "Amazon RDS for MySQL with Read Replicas can provide additional read capacity, but it does not offer automatic scaling of compute resources based on traffic demands." },
+        { label: "Amazon DynamoDB with on-demand capacity", reason: "Amazon DynamoDB with on-demand capacity mode provides automatic scaling for NoSQL workloads, but the startup requires a relational database, which DynamoDB is not." },
+        { label: "Amazon Redshift with elastic resize", reason: "Amazon Redshift is a data warehousing service that offers some scalability, but it is not designed for operational database workloads with unpredictable burst patterns and does not scale as seamlessly as Aurora Serverless." }
+      ]
+    }
+  },
+  {
+    text: "An organization's primary transaction processing system is powered by an Amazon RDS for PostgreSQL database. The workload is write-heavy, which is causing consistently high CPU utilization, leading to performance degradation of the system.\n\nWhat measures should the data engineer implement to alleviate the CPU load on the RDS instance? (Select TWO.)",
+    options: [
+      "Enable Amazon RDS Performance Insights to analyze and identify expensive queries contributing to high CPU usage.",
+      "Configure a read replica to offload read operations and reduce the load on the primary instance.",
+      "Increase the IOPS allocation for the RDS instance to handle the write-heavy workload more efficiently.",
+      "Scale up the RDS instance to a larger class with more CPU and memory resources.",
+      "Implement Amazon ElastiCache to cache frequent queries and decrease the read load on the database."
+    ],
+    correct: [0, 3],
+    feedback: {
+      explanation: "Performance Insights is an RDS feature that allows for an easy assessment of the database load and helps to identify SQL queries consuming excessive CPU resources. By focusing on query-level diagnostics and optimizations, the data engineer can target the root cause of high CPU utilization. Upgrading to a larger instance size with more CPU capacity is a direct approach to addressing high CPU utilization, providing the database with more computational resources to handle the write-heavy workload.",
+      wrong: [
+        { label: "Configure a read replica", reason: "Read replicas are beneficial in read-heavy scenarios. They would not significantly impact CPU utilization caused primarily by write operations, as stated in the scenario." },
+        { label: "Increase IOPS allocation", reason: "Increasing IOPS addresses disk I/O bottlenecks rather than CPU utilization issues directly caused by write-heavy workloads." },
+        { label: "Implement Amazon ElastiCache", reason: "Caching is typically effective for read-heavy workloads. Since the workload described is mostly writes, implementing a caching layer would not have a significant impact on reducing CPU utilization associated with write operations." }
+      ]
+    }
+  },
+  {
+    text: "A company stores large volumes of data in Amazon S3, with access patterns that vary unpredictably. They need a cost-effective storage solution that automatically adjusts pricing based on data retrieval frequency without manual intervention.\n\nWhich storage option should the company use to ensure cost savings for their variable data access patterns?",
+    options: [
+      "Store the data using the Amazon S3 Standard storage class for consistent high availability.",
+      "Use the Amazon S3 Glacier storage class for long-term archival storage of the data.",
+      "Configure the Amazon S3 buckets to utilize the Intelligent-Tiering storage class.",
+      "Store objects in the Amazon S3 One Zone-Infrequent Access storage class for data that is accessed less frequently."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "Amazon S3 Intelligent-Tiering is a storage class designed to optimize costs by automatically moving data to the most cost-effective access tier, without performance impact or operational overhead. This class is suitable for data with unknown or changing access patterns, as it adjusts the pricing based on the frequency of access.",
+      wrong: [
+        { label: "Amazon S3 Standard", reason: "S3 Standard is optimized for frequently accessed data and does not provide cost savings for data with unpredictable access patterns, making it less cost-effective for this use case." },
+        { label: "Amazon S3 Glacier", reason: "S3 Glacier is intended for data archiving with retrieval times ranging from minutes to hours, which does not align with the company's requirement for a storage solution that adjusts to variable access patterns." },
+        { label: "S3 One Zone-Infrequent Access", reason: "While S3 One Zone-IA is a cost-saving storage option for infrequently accessed data, it does not automatically adjust to changing access patterns like the Intelligent-Tiering storage class does." }
+      ]
+    }
+  },
+  {
+    text: "A company has multiple data sources stored in different formats on Amazon S3. They want to enable their data analysts to easily discover and access these datasets for analysis. The company needs an efficient way to catalog this data and make it searchable.\n\nWhich AWS service should the company use to automate the creation of a data catalog that makes their datasets in Amazon S3 easily discoverable for analysis?",
+    options: [
+      "Use AWS Lambda to scan S3 buckets and manually update an Amazon DynamoDB table as a data catalog.",
+      "Implement an AWS Glue Crawler to scan the data in S3 and automatically populate the AWS Glue Data Catalog.",
+      "Configure Amazon RDS to create and maintain a relational database-based catalog of the S3 data.",
+      "Use Amazon Athena to manually query the S3 datasets and build a data catalog."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "AWS Glue Crawler is the most suitable solution for this scenario. It automatically scans data in Amazon S3 and other data stores, infers schemas, and creates metadata tables in the AWS Glue Data Catalog. This enables data analysts to easily discover and access various datasets for analysis. Glue Crawlers can handle multiple data formats and automatically keep the catalog updated with changes in the data structure.",
+      wrong: [
+        { label: "AWS Lambda + DynamoDB", reason: "While AWS Lambda could be used to scan S3 buckets, manually updating a DynamoDB table for cataloging is time-consuming and not efficient. It lacks the automated schema detection and cataloging features provided by AWS Glue Crawlers." },
+        { label: "Amazon RDS", reason: "Using Amazon RDS to manually create and maintain a data catalog is not efficient for this purpose. RDS is a database service for relational databases and does not offer the automated cataloging capabilities of AWS Glue." },
+        { label: "Amazon Athena", reason: "Amazon Athena is a query service and is not designed to automatically catalog data. It is used for querying data in S3 using SQL but does not automatically create and maintain a data catalog." }
+      ]
+    }
+  },
+  {
+    text: "A data engineering team wants to run SQL queries on their Amazon Redshift cluster from various applications without managing database connections.\n\nWhich AWS service allows them to submit and manage these queries efficiently?",
+    options: [
+      "Use the Amazon Redshift Data API to run and manage SQL queries.",
+      "Use the Amazon Redshift Query Editor for direct SQL execution.",
+      "Implement AWS Lambda with Redshift as a trigger for query execution.",
+      "Deploy Amazon EC2 instances to host applications that connect to Redshift."
+    ],
+    correct: [0],
+    feedback: {
+      explanation: "The Amazon Redshift Data API enables easy and secure access to Redshift from any application without the need to manage database connections. It's suitable for building serverless applications and executing SQL commands asynchronously, making it ideal for scenarios requiring integration with various application environments or when managing batch SQL workloads.",
+      wrong: [
+        { label: "Amazon Redshift Query Editor", reason: "The Redshift Query Editor is a web-based tool to run SQL queries directly on a Redshift cluster. It's designed for manual use via the AWS Console and is not suitable for programmatic access or integration within applications." },
+        { label: "AWS Lambda with Redshift trigger", reason: "Redshift cannot trigger Lambda functions directly. Lambda is often used for data processing tasks but would require more setup for managing Redshift connections, which the team wants to avoid." },
+        { label: "Amazon EC2 instances", reason: "Using Amazon EC2 instances involves managing server infrastructure, including applications and database connections. This contradicts the team's requirement to avoid managing database connections." }
+      ]
+    }
+  },
+  {
+    text: "A data engineering team at an e-commerce company is optimizing their query performance on Amazon Redshift. They have numerous complex queries running against large, joined datasets and have identified that some queries are not as efficient as they could be. The team is considering the use of materialized views to speed up these queries.\n\nWhich feature should the team implement to enhance their query performance in Redshift, especially for frequently executed queries that join multiple tables?",
+    options: [
+      "Activate Redshift's automatic workload management (WLM) to dynamically manage memory and prioritize queries.",
+      "Enable short query acceleration in Redshift to prioritize execution of the complex join queries.",
+      "Configure Redshift Spectrum to offload the complex join queries and utilize external tables for better performance.",
+      "Use Redshift's Query Optimizer with materialized views to precompute and store the results of complex joins."
+    ],
+    correct: [3],
+    feedback: {
+      explanation: "Redshift's Query Optimizer can improve the performance of complex query execution, especially for those that are run frequently and involve joins across large tables. By creating materialized views, the team can store the precomputed results of these expensive join operations. When queries are executed, the Query Optimizer can utilize the materialized views to deliver faster query performance since the data has already been aggregated and stored.",
+      wrong: [
+        { label: "Automatic WLM", reason: "While WLM is useful for managing query performance by allocating memory and prioritizing different types of queries, it does not inherently optimize the execution plans of queries involving complex joins as materialized views would." },
+        { label: "Short query acceleration", reason: "Short query acceleration (SQA) is designed to prioritize shorter, interactive queries over longer-running ones. It would not necessarily optimize the performance of complex join operations." },
+        { label: "Redshift Spectrum", reason: "Redshift Spectrum is used for querying data that resides in S3 without loading it into Redshift. While it can be used for processing large datasets, it's not specifically designed to optimize complex joins within Redshift itself." }
+      ]
+    }
+  },
+  {
+    text: "A data engineering team needs to manage and query a continuously evolving dataset of customer transactions stored in Amazon S3. They use Amazon Athena for querying and require an automated solution to handle schema changes in the dataset.\n\nWhat AWS service should the team use to efficiently manage the schema and ensure seamless integration with Athena for updated data queries?",
+    options: [
+      "Implement AWS Data Pipeline for automated data transfer and schema updates.",
+      "Use AWS Glue Data Catalog for schema management and metadata storage.",
+      "Configure Amazon Redshift Spectrum to manage schema changes.",
+      "Apply Amazon RDS for automated database management and schema updates."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "The AWS Glue Data Catalog is a fully managed, centralized metadata repository compatible with Amazon Athena. It offers the capability to automatically detect and reflect schema changes. When data in S3 changes, Glue Crawlers can be used to update the schema in the Data Catalog. This updated schema is then automatically available to Athena, allowing seamless querying of the latest data without manual intervention.",
+      wrong: [
+        { label: "AWS Data Pipeline", reason: "AWS Data Pipeline is a web service for automating the movement and transformation of data. While effective for data transfer and orchestration, it does not specialize in schema management or direct integration with Amazon Athena for querying purposes." },
+        { label: "Amazon Redshift Spectrum", reason: "Amazon Redshift Spectrum allows running SQL queries directly against data in S3, but it is a feature within Amazon Redshift rather than a standalone service for schema management. Not primarily used for automatic schema updates." },
+        { label: "Amazon RDS", reason: "Amazon RDS is used for relational database management. It does not provide direct functionality for managing schemas of datasets stored in Amazon S3, nor does it integrate with Athena for querying data in S3." }
+      ]
+    }
+  },
+  {
+    text: "A financial firm's Amazon Redshift cluster manages a table named FinancialRecords, which undergoes frequent data updates and deletions. The table uses an interleaved sort key based on transaction types. Concerned about the growing disk space usage and diminishing query performance, the firm seeks to optimize the table's storage efficiency and maintain the sort key's effectiveness.\n\nWhich Amazon Redshift command should a data engineer use to address these issues?",
+    options: [
+      "VACUUM FULL FinancialRecords",
+      "VACUUM DELETE ONLY FinancialRecords",
+      "ALTER TABLE FinancialRecords APPEND FROM STAGING_TABLE",
+      "ANALYZE FinancialRecords"
+    ],
+    correct: [0],
+    feedback: {
+      explanation: "VACUUM FULL performs both space reclamation and data re-sorting. Space reclamation is important after frequent updates and deletions, as these operations leave behind space that can be compacted. The data re-sorting is particularly crucial when using an interleaved sort key, as it can become less effective over time with data changes. The VACUUM FULL command effectively addresses both disk space usage and the need for efficient data processing.",
+      wrong: [
+        { label: "VACUUM DELETE ONLY", reason: "This command only reclaims space from deleted rows but doesn't resort the data based on the table's sort key. While it helps in reducing disk space usage, it does not address the potential decline in query performance due to the unoptimized state of the sort key." },
+        { label: "ALTER TABLE ... APPEND FROM STAGING_TABLE", reason: "The ALTER TABLE ... APPEND command is used to quickly migrate data from one table to another. It's not designed for routine maintenance tasks like reclaiming space or re-sorting data." },
+        { label: "ANALYZE FinancialRecords", reason: "The ANALYZE command updates the statistics used by the query planner. While important for optimizing query performance, it does not reclaim disk space or re-sort data." }
+      ]
+    }
+  },
+  {
+    text: "A data engineer needs to streamline a process where a specific AWS Lambda function processes data and subsequently triggers an AWS Glue ETL job. This automated workflow should be simple to manage and fully integrated within the AWS ecosystem.\n\nWhich AWS service or feature should the data engineer use to orchestrate this sequence of actions with minimal administrative effort?",
+    options: [
+      "Configure Amazon EventBridge to trigger the Lambda function and then the AWS Glue job upon successful completion.",
+      "Use AWS Batch to manage a job workflow, first executing the Lambda function as a job and then the AWS Glue job.",
+      "Use AWS Glue triggers to initiate the Lambda function and then the AWS Glue job in sequence.",
+      "Set up an AWS CodePipeline where the first stage executes the Lambda function and the subsequent stage triggers the AWS Glue job."
+    ],
+    correct: [2],
+    feedback: {
+      explanation: "AWS Glue triggers allow you to schedule and run ETL jobs in AWS Glue. While typically used for triggering Glue jobs directly, you can also set up triggers to call a Lambda function before or after a Glue job runs. Using AWS Glue triggers provides a low-management-overhead solution for orchestrating tasks that involve both Lambda functions and Glue jobs, relying on AWS Glue's native scheduling and dependency resolution features.",
+      wrong: [
+        { label: "Amazon EventBridge", reason: "Amazon EventBridge can be used to trigger both Lambda functions and AWS Glue jobs, but it's primarily an event-routing service and would require additional setup to handle the dependency and sequencing between the Lambda function and the Glue job, potentially increasing management overhead." },
+        { label: "AWS Batch", reason: "AWS Batch is designed to run batch computing workloads and is not tailored for integrating Lambda and Glue jobs. Setting up AWS Batch would introduce unnecessary complexity for a workflow that primarily involves AWS Glue and Lambda." },
+        { label: "AWS CodePipeline", reason: "AWS CodePipeline is a continuous integration and continuous delivery service for automating release pipelines. It is more suited for code deployments and delivery processes, not data pipelines. Using CodePipeline would be overkill for this purpose." }
+      ]
+    }
+  },
+  {
+    text: "A gaming company is developing a real-time, multiplayer online game that requires a fast, in-memory data store for session management and player leaderboards. The data store must support microsecond latency for read and write operations and offer high availability and durability.\n\nWhich AWS service should the gaming company use to meet these requirements for their real-time online game?",
+    options: [
+      "Use Amazon RDS with a high-performance instance type for session management and leaderboards.",
+      "Use Amazon MemoryDB for Redis to achieve microsecond latency and high availability.",
+      "Use Amazon DynamoDB with DAX for low latency read and write operations.",
+      "Use Amazon ElastiCache for Memcached for in-memory caching and session management."
+    ],
+    correct: [1],
+    feedback: {
+      explanation: "Amazon MemoryDB for Redis is a Redis-compatible, fully managed, in-memory database service built for cloud applications that require microsecond latency for read and write operations. MemoryDB is designed to provide both high availability and data durability, which are essential for real-time, multiplayer online games. It supports use cases such as session management and leaderboards.",
+      wrong: [
+        { label: "Amazon RDS with high-performance instance", reason: "While Amazon RDS can handle relational data requirements efficiently, it may not meet the microsecond latency requirements for real-time gaming applications. RDS is better suited for transactional workloads rather than high-speed read/write operations needed for gaming session management." },
+        { label: "Amazon DynamoDB with DAX", reason: "DynamoDB combined with DAX does offer low latency read performance, but it may not consistently achieve the microsecond response times required for real-time gaming scenarios. MemoryDB for Redis is more optimized for the ultra-low latency required in this scenario." },
+        { label: "Amazon ElastiCache for Memcached", reason: "Amazon ElastiCache for Memcached provides high-performance, in-memory caching. However, it lacks some of the data durability and native high-availability features provided by MemoryDB for Redis." }
+      ]
+    }
+  }
+];
+
+// ── STATE ──
+let answered = new Array(questions.length).fill(false);
+let multiSelected = questions.map(q => new Set());
+let correctCount = 0;
+
+function isMulti(qi) {
+  return questions[qi].correct.length > 1;
+}
+
+function buildExam() {
+  document.getElementById('total-num').textContent = questions.length;
+  const container = document.getElementById('questions-container');
+  container.innerHTML = '';
+
+  questions.forEach((q, qi) => {
+    const letters = ['A','B','C','D','E'];
+    const card = document.createElement('div');
+    card.className = 'q-card';
+    card.id = `q-${qi}`;
+
+    const multi = isMulti(qi);
+
+    const optionsHTML = q.options.map((opt, oi) => `
+      <div class="option" id="opt-${qi}-${oi}" onclick="selectOption(${qi}, ${oi})">
+        <div class="option-letter">${letters[oi]}</div>
+        <div class="option-text">${opt}</div>
+        <div class="icon-mark"></div>
+      </div>
+    `).join('');
+
+    const wrongList = q.feedback.wrong.map(w => `
+      <p><span class="tag incorrect-tag">INCORRECTO</span><strong>${w.label}:</strong> ${w.reason}</p>
+    `).join('');
+
+    card.innerHTML = `
+      <div class="q-badge">
+        <div class="q-num">Pregunta ${qi + 1} de ${questions.length}</div>
+        ${multi ? '<div class="multi-badge">SELECCIONA DOS</div>' : ''}
+      </div>
+      <div class="q-text">${q.text.replace(/\n/g,'<br>')}</div>
+      <div class="options">${optionsHTML}</div>
+      ${multi ? `<button class="multi-submit visible" id="submit-${qi}" onclick="submitMulti(${qi})" disabled>Confirmar respuesta</button>` : ''}
+      <div class="feedback" id="fb-${qi}">
+        <div class="feedback-header" id="fb-header-${qi}"></div>
+        <div class="feedback-body">
+          <p><span class="tag correct-tag">CORRECTO</span>${q.feedback.explanation}</p>
+          ${wrongList}
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function selectOption(qi, oi) {
+  if (answered[qi]) return;
+  const q = questions[qi];
+  const multi = isMulti(qi);
+
+  if (!multi) {
+    // Single select: answer immediately
+    answered[qi] = true;
+    const isCorrect = q.correct[0] === oi;
+    const letters = ['A','B','C','D','E'];
+    q.options.forEach((_, idx) => {
+      const el = document.getElementById(`opt-${qi}-${idx}`);
+      el.classList.add('disabled');
+      if (q.correct.includes(idx)) {
+        el.classList.add('correct');
+        el.querySelector('.icon-mark').textContent = '✓';
+      } else if (idx === oi && !isCorrect) {
+        el.classList.add('wrong');
+        el.querySelector('.icon-mark').textContent = '✗';
+      }
+    });
+    const card = document.getElementById(`q-${qi}`);
+    card.classList.add('answered');
+    if (isCorrect) { card.classList.add('correct-card'); correctCount++; }
+    showFeedback(qi, isCorrect, letters[q.correct[0]]);
+    updateProgress();
+    checkComplete();
+  } else {
+    // Multi-select: toggle selection
+    const el = document.getElementById(`opt-${qi}-${oi}`);
+    if (multiSelected[qi].has(oi)) {
+      multiSelected[qi].delete(oi);
+      el.classList.remove('selected');
+      el.querySelector('.option-letter').style.background = '';
+      el.querySelector('.option-letter').style.borderColor = '';
+      el.querySelector('.option-letter').style.color = '';
+    } else {
+      multiSelected[qi].add(oi);
+      el.classList.add('selected');
+    }
+    const btn = document.getElementById(`submit-${qi}`);
+    btn.disabled = multiSelected[qi].size !== q.correct.length;
+  }
+}
+
+function submitMulti(qi) {
+  if (answered[qi]) return;
+  answered[qi] = true;
+  const q = questions[qi];
+  const letters = ['A','B','C','D','E'];
+  const selected = Array.from(multiSelected[qi]);
+  const correctSet = new Set(q.correct);
+  const isCorrect = selected.length === q.correct.length && selected.every(s => correctSet.has(s));
+
+  q.options.forEach((_, idx) => {
+    const el = document.getElementById(`opt-${qi}-${idx}`);
+    el.classList.add('disabled');
+    el.classList.remove('selected');
+    if (q.correct.includes(idx)) {
+      el.classList.add('correct');
+      el.querySelector('.icon-mark').textContent = '✓';
+    } else if (selected.includes(idx) && !q.correct.includes(idx)) {
+      el.classList.add('wrong');
+      el.querySelector('.icon-mark').textContent = '✗';
+    }
+  });
+
+  const card = document.getElementById(`q-${qi}`);
+  card.classList.add('answered');
+  if (isCorrect) { card.classList.add('correct-card'); correctCount++; }
+  document.getElementById(`submit-${qi}`).style.display = 'none';
+
+  const correctLabels = q.correct.map(i => letters[i]).join(' y ');
+  showFeedback(qi, isCorrect, correctLabels);
+  updateProgress();
+  checkComplete();
+}
+
+function showFeedback(qi, isCorrect, correctLabels) {
+  const fb = document.getElementById(`fb-${qi}`);
+  const fbHeader = document.getElementById(`fb-header-${qi}`);
+  fb.classList.add('show');
+  if (isCorrect) {
+    fbHeader.className = 'feedback-header ok';
+    fbHeader.innerHTML = '✓ &nbsp; Respuesta Correcta';
+    document.getElementById('score-num').textContent = correctCount;
+  } else {
+    fbHeader.className = 'feedback-header fail';
+    fbHeader.innerHTML = `✗ &nbsp; Incorrecto — la respuesta correcta era <strong>${correctLabels}</strong>`;
+    document.getElementById('score-num').textContent = correctCount;
+  }
+}
+
+function updateProgress() {
+  const done = answered.filter(Boolean).length;
+  document.getElementById('progress-bar').style.width = (done / questions.length * 100) + '%';
+}
+
+function checkComplete() {
+  const done = answered.filter(Boolean).length;
+  if (done === questions.length) {
+    const panel = document.getElementById('results-panel');
+    document.getElementById('final-correct').textContent = correctCount;
+    document.getElementById('final-total').textContent = questions.length;
+    const pct = Math.round((correctCount / questions.length) * 100);
+    document.getElementById('final-pct').textContent = `${pct}% de respuestas correctas`;
+    panel.classList.add('show');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function resetExam() {
+  answered = new Array(questions.length).fill(false);
+  multiSelected = questions.map(() => new Set());
+  correctCount = 0;
+  document.getElementById('score-num').textContent = '0';
+  document.getElementById('results-panel').classList.remove('show');
+  document.getElementById('progress-bar').style.width = '0%';
+  buildExam();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+buildExam();
+</script>
+</body>
+</html>
